@@ -1,0 +1,5 @@
+include("GoogleTest")
+add_executable("tests" "test.cpp")
+target_link_libraries("tests" "gtest_main")
+gtest_discover_tests(tests)
+target_include_directories("tests" PUBLIC ${googletest_SOURCE_DIR}/googletest/include/gtest)
