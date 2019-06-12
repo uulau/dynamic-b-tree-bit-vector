@@ -72,6 +72,32 @@ vector<message> read_test() {
 	return messages;
 }
 
+vector<message> generate_ram_test(uint64_t operations, double insert_ratio, double query_ratio) {
+	assert(insert_ratio + query_ratio == 1);
+	assert(operations > 0);
+
+	vector<message> messages;
+	auto insert_count = operations * insert_ratio;
+	auto query_count = operations * query_ratio;
+	// Seed random number generator with time
+	srand(time(0));
+	auto insert_counter = 0;
+	for (auto i = 0; i < operations; i++) {
+		auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
+		if (insert) {
+			auto position = rand() % (insert_counter + 1);
+			auto bit = rand() % 2;
+			messages.push_back(insert_message(position, bit));
+			insert_counter++;
+		}
+		else {
+			auto position = rand() % (insert_counter);
+			messages.push_back(query_message(position));
+		}
+	}
+	return messages;
+}
+
 template<class T> void execute_test(const vector<message>& messages, succinct_bitvector<T> bv) {
 	for (message message : messages) {
 		if (message.type == message_type::insert) {

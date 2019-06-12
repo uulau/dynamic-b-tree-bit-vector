@@ -174,7 +174,7 @@ namespace be {
 
 				assert(i <= root->size());
 
-				node<leaf_type, B, B_LEAF>* new_root = root->create_message(insert_message(i, x), root);
+				node<leaf_type, B, B_LEAF>* new_root = root->create_message(insert_message(i, x));
 
 				if (new_root != NULL) {
 
@@ -202,7 +202,7 @@ namespace be {
 			 * remove the integer x at position i
 			 */
 			void remove(uint64_t i) {
-				node<leaf_type, B, B_LEAF>* new_root = root->create_message(remove_message(i), root);
+				node<leaf_type, B, B_LEAF>* new_root = root->remove(i);
 				if (new_root != NULL) {
 					delete root;
 					root = new_root;
@@ -260,8 +260,8 @@ namespace be {
 
 				assert(size() > 0);
 				assert(i < size());
-				
-				return root->at(i, root, &vector<message>());
+
+				return root->at(i, &vector<message>());
 			}
 
 			/*
