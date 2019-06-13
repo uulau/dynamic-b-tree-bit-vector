@@ -72,11 +72,11 @@ vector<message> read_test() {
 	return messages;
 }
 
-vector<message> generate_ram_test(uint64_t operations, double insert_ratio, double query_ratio) {
+vector<message>& generate_ram_test(uint64_t operations, double insert_ratio, double query_ratio) {
 	assert(insert_ratio + query_ratio == 1);
 	assert(operations > 0);
 
-	vector<message> messages;
+	auto messages = new vector<message>;
 	auto insert_count = operations * insert_ratio;
 	auto query_count = operations * query_ratio;
 	// Seed random number generator with time
@@ -87,15 +87,15 @@ vector<message> generate_ram_test(uint64_t operations, double insert_ratio, doub
 		if (insert) {
 			auto position = rand() % (insert_counter + 1);
 			auto bit = rand() % 2;
-			messages.push_back(insert_message(position, bit));
+			messages->push_back(insert_message(position, bit));
 			insert_counter++;
 		}
 		else {
 			auto position = rand() % (insert_counter);
-			messages.push_back(query_message(position));
+			messages->push_back(query_message(position));
 		}
 	}
-	return messages;
+	return *messages;
 }
 
 template<class K> void execute_test(const vector<message>& messages, K tree) {

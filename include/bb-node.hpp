@@ -7,6 +7,8 @@ using namespace dyn;
 namespace bb {
 	template <class leaf_type, uint32_t B, uint32_t B_LEAF> class node {
 	public:
+		vector<message>* message_buffer;
+
 		/*
 		 * copy constructor
 		 */
@@ -47,12 +49,13 @@ namespace bb {
 
 			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty and children is empty
 
+			message_buffer = n.message_buffer;
 		}
 
 		/*
 		 * create new root node. This node has only 1 (empty) child, which is a leaf.
 		 */
-		node() {
+		node(vector<message>* message_buffer) {
 			subtree_sizes = vector<uint64_t>(2 * B + 2);
 			subtree_psums = vector<uint64_t>(2 * B + 2);
 
@@ -61,14 +64,16 @@ namespace bb {
 
 			leaves = vector<leaf_type*>(1);
 			leaves[0] = new leaf_type();
-
+			this->message_buffer = message_buffer;
 		}
 
 		/*
 		 * create new node given some children (other internal nodes),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<node*>& c, node* P = NULL, uint32_t rank = 0) {
+		node(vector<message>* message_buffer, vector<node*>& c, node* P = NULL, uint32_t rank = 0) {
+
+			this->message_buffer = message_buffer;
 
 			this->rank_ = rank;
 			this->parent = P;
@@ -110,7 +115,9 @@ namespace bb {
 		 * create new node given some children (leaves),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<leaf_type*>& c, node* P = NULL, uint32_t rank = 0) {
+		node(vector<message>* message_buffer, vector<leaf_type*>& c, node* P = NULL, uint32_t rank = 0) {
+
+			this->message_buffer = message_buffer;
 
 			this->rank_ = rank;
 			this->parent = P;
@@ -607,7 +614,7 @@ namespace bb {
 
 					vector<node*> vn{ this, right };
 
-					new_root = new node(vn);
+					new_root = new node(message_buffer, vn);
 					assert(not new_root->is_full());
 
 					this->overwrite_parent(new_root);
@@ -705,7 +712,9 @@ namespace bb {
 			assert(nr_children > 0);
 			assert(nr_children - 1 < subtree_sizes.size());
 
-			return subtree_sizes[nr_children - 1];
+			uint64_t counter = 0;
+
+			return counter + subtree_sizes[nr_children - 1];
 		}
 
 		uint64_t psum() {
@@ -1105,7 +1114,7 @@ namespace bb {
 
 				assert(k == right_children_l.size());
 
-				right = new node(right_children_l, parent, rank() + 1);
+				right = new node(message_buffer, right_children_l, parent, rank() + 1);
 				leaves.erase(leaves.begin() + nr_children / 2, leaves.end());
 
 			}
@@ -1120,7 +1129,7 @@ namespace bb {
 
 				assert(k == right_children_n.size());
 
-				right = new node(right_children_n, parent, rank() + 1);
+				right = new node(message_buffer, right_children_n, parent, rank() + 1);
 
 				children.erase(children.begin() + nr_children / 2, children.end());
 
@@ -1507,7 +1516,7 @@ namespace bb {
 					cc.insert(cc.end(), next->children.begin(), next->children.end());
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(cc, prev->parent, prev->rank());
+					xy = new node(message_buffer, cc, prev->parent, prev->rank());
 				}
 				else {
 					assert(prev->nr_children == prev->leaves.size());
@@ -1523,7 +1532,7 @@ namespace bb {
 					}
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(cc, prev->parent, prev->rank());
+					xy = new node(message_buffer, cc, prev->parent, prev->rank());
 				}
 
 				//update xy->parent

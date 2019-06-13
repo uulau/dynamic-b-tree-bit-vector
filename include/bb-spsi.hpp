@@ -61,7 +61,7 @@ namespace bb {
 			 */
 			spsi(uint64_t max_len = 0, uint64_t width = 0, int64_t buffer_size = 20) {
 
-				root = new node<leaf_type, B, B_LEAF>();
+				root = new node<leaf_type, B, B_LEAF>(&message_buffer);
 				init_message_buffer(buffer_size);
 
 			}
@@ -196,9 +196,9 @@ namespace bb {
 			 * return number of integers stored in the structure
 			 */
 			uint64_t size() const {
-				int counter = 0;
+				uint64_t counter = 0;
 
-				for (message message : message_buffer) {
+				for (const auto& message : message_buffer) {
 					if (message.type == message_type::insert) {
 						counter++;
 					}
