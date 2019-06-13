@@ -11,7 +11,7 @@ typedef b::spsi<packed_vector, 256, 16> btree;
 typedef bb::spsi<packed_vector, 256, 16> bbtree;
 typedef be::spsi<packed_vector, 256, 16> betree;
 
-static int UNIT_MAX = 8 << 15;
+static int UNIT_MAX = 8 << 12;
 
 static void BTreeInsertion(benchmark::State& state) {
 	auto tree = btree(0, 0, 0);
