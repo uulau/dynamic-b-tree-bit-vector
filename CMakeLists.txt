@@ -39,4 +39,5 @@ include_directories ("include")
 
 add_subdirectory ("test-case-generator")
 add_subdirectory ("benchmark")
+add_subdirectory ("profiler")
 add_subdirectory ("tests")

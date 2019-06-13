@@ -5,12 +5,12 @@
 // MSVC and/or keywords etc.
 #include <iso646.h>
 
-// GCC intrinsics (for MSVC)
-#define PSNIP_BUILTIN_EMULATE_NATIVE
-#include "builtin.h"
-
 #ifndef INTERNAL_PACKED_BLOCK_HPP_
 #define INTERNAL_PACKED_BLOCK_HPP_
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 
 #include "includes.hpp"
 
@@ -147,6 +147,16 @@ namespace dyn {
 			psum_ = psum(size_ - 1);
 
 		}
+
+#if defined(_MSC_VER)
+		int __builtin_popcountll(uint64_t num) {
+			return __popcnt64(num);
+		}
+
+		int __builtin_clzll(uint64_t num) {
+			return __lzcnt64(num);
+		}
+#endif
 
 		/*
 		 * high-level access to the vector. Supports assign, access,

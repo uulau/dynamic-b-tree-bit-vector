@@ -59,10 +59,10 @@ namespace bb {
 			 * create empty spsi. Input parameters are not used (legacy option). This structure
 			 * does not need a max size, and width is automatically detected.
 			 */
-			spsi(uint64_t max_len = 0, uint64_t width = 0) {
+			spsi(uint64_t max_len = 0, uint64_t width = 0, int64_t buffer_size = 20) {
 
 				root = new node<leaf_type, B, B_LEAF>();
-				init_messages(20);
+				init_message_buffer(buffer_size);
 
 			}
 
@@ -77,7 +77,7 @@ namespace bb {
 
 			}
 
-			void init_messages(uint64_t count) {
+			void init_message_buffer(uint64_t count) {
 				message_buffer = vector<message>();
 				message_buffer.reserve(count);
 			}

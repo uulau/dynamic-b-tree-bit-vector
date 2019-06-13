@@ -7,14 +7,9 @@ using namespace dyn;
 namespace be {
 	template <class leaf_type, uint32_t B, uint32_t B_LEAF> class node {
 	public:
-		constexpr const uint64_t message_max_count() {
-			// FIXME
-			return 1;
-		}
-
-		void init_message_buffer() {
+		void init_message_buffer(uint64_t message_count) {
 			message_buffer = vector<message>();
-			message_buffer.reserve(message_max_count());
+			message_buffer.reserve(message_count);
 		}
 
 		/*
@@ -62,8 +57,8 @@ namespace be {
 		/*
 		 * create new root node. This node has only 1 (empty) child, which is a leaf.
 		 */
-		node() {
-			init_message_buffer();
+		node(uint64_t message_count) {
+			init_message_buffer(message_count);
 
 			subtree_sizes = vector<uint64_t>(2 * B + 2);
 			subtree_psums = vector<uint64_t>(2 * B + 2);
@@ -80,12 +75,12 @@ namespace be {
 		 * create new node given some children (other internal nodes),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<node*>& c, node* P = NULL, uint32_t rank = 0) {
+		node(vector<node*>& c, int64_t message_count, node* P = NULL, uint32_t rank = 0) {
 
 			this->rank_ = rank;
 			this->parent = P;
 
-			init_message_buffer();
+			init_message_buffer(message_count);
 
 			subtree_sizes = vector<uint64_t>(2 * B + 2);
 			subtree_psums = vector<uint64_t>(2 * B + 2);
@@ -124,12 +119,10 @@ namespace be {
 		 * create new node given some children (leaves),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<leaf_type*>& c, node* P = NULL, uint32_t rank = 0) {
+		node(vector<leaf_type*>& c, int64_t message_count, node* P = NULL, uint32_t rank = 0) {
 
 			this->rank_ = rank;
 			this->parent = P;
-
-			init_message_buffer();
 
 			subtree_sizes = vector<uint64_t>(2 * B + 2);
 			subtree_psums = vector<uint64_t>(2 * B + 2);
@@ -151,6 +144,8 @@ namespace be {
 
 			nr_children = c.size();
 			has_leaves_ = true;
+
+			init_message_buffer(message_count);
 
 			leaves = vector<leaf_type*>(c);
 
@@ -239,7 +234,6 @@ namespace be {
 						counter++;
 					}
 				}
-				int a = 1;
 			}
 
 			if (counter != 0) {
@@ -570,7 +564,7 @@ namespace be {
 		}
 
 		const bool message_buffer_is_full() {
-			return message_buffer.size() == message_max_count();
+			return message_buffer.size() == message_buffer.capacity();
 		}
 
 		/*
@@ -635,7 +629,7 @@ namespace be {
 
 					vector<node*> vn{ this, right };
 
-					new_root = new node(vn);
+					new_root = new node(vn, message_buffer.capacity());
 					assert(not new_root->is_full());
 
 					this->overwrite_parent(new_root);
@@ -654,7 +648,7 @@ namespace be {
 						auto right = n->split();
 						if (n->is_root()) {
 							vector<node*> vn{ n, right };
-							new_root = new node(vn);
+							new_root = new node(vn, message_buffer.capacity());
 							assert(not new_root->is_full());
 							n->overwrite_parent(new_root);
 							right->overwrite_parent(new_root);
@@ -741,8 +735,6 @@ namespace be {
 			return new_root;
 		}
 
-
-
 		uint32_t rank() { return rank_; }
 
 		void overwrite_rank(uint32_t r) { rank_ = r; }
@@ -755,26 +747,7 @@ namespace be {
 		}
 
 		uint64_t size() {
-			return size_no_messages() /*+ messages()*/;
-		}
-
-		uint64_t messages() {
-			if (has_leaves()) {
-				return 0;
-			}
-
-			uint64_t sum = 0;
-
-			for (message message : message_buffer) {
-				if (message.type == message_type::insert) {
-					sum++;
-				}
-				else if (message.type == message_type::remove) {
-					sum--;
-				}
-			}
-
-			return sum;
+			return size_no_messages() + message_additions;
 		}
 
 		uint64_t messages_sum() {
@@ -915,7 +888,7 @@ namespace be {
 
 		}
 
-		node* create_message(message m) {
+		node* create_message(const message& m) {
 			node* new_root = NULL;
 			if (has_leaves()) {
 				if (m.type == message_type::insert) {
@@ -925,43 +898,98 @@ namespace be {
 					// FIXME
 					new_root = remove(m.index);
 				}
+				else if (m.type == message_type::update) {
+					// FIXME
+				}
 			}
 			else {
-				message_buffer.push_back(m);
-				update_counters();
+				add_message(m);
 				if (message_buffer_is_full()) {
-					vector<message> mbuffer(message_buffer);
-					for (auto& message : mbuffer) {
-						auto j = 0;
-						while (this->subtree_sizes[j] < message.index) {
-							j++;
-						}
-						auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-
-						auto i = message.index - previous_size;
-
-						message_buffer.erase(message_buffer.begin());
-
-						auto messages = message_buffer.size();
-
-						if (message.type == message_type::insert) {
-							new_root = children[j]->create_message(insert_message(i, message.value));
-						}
-						else if (message.type == message_type::remove) {
-							new_root = children[j]->create_message(remove_message(i));
-						}
-
-						new_root ? new_root->update_counters() : update_counters();
-
-						if (messages != message_buffer.size()) {
-							break;
-						}
-					}
+					new_root = flush_messages();
 				}
 			}
 
 			return new_root;
 		}
+
+		node* flush_messages() {
+			node* new_root = NULL;
+			while (!message_buffer.empty()) {
+				message message = message_buffer[0];
+				auto index = message.index;
+				auto value = message.value;
+				auto type = message.type;
+
+				auto j = nr_children - 1;
+				if (index < size() - message_buffer.size()) {
+					j = 0;
+					while (subtree_sizes[j] <= index) {
+						j++;
+					}
+				}
+
+				auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+
+				auto i = index - previous_size;
+
+				erase_message(message);
+
+				auto messages = message_buffer.size();
+
+				if (type == message_type::insert) {
+					new_root = children[j]->create_message(insert_message(i, value));
+				}
+				else if (type == message_type::remove) {
+					new_root = children[j]->create_message(remove_message(i));
+				}
+
+				new_root ? new_root->update_counters() : update_counters();
+
+				if (messages != message_buffer.size()) {
+					break;
+				}
+			}
+			return new_root;
+		}
+
+		void add_message(const message& m) {
+			switch (m.type) {
+			case message_type::insert: {
+				message_additions++;
+				message_buffer.push_back(m);
+				break;
+			}
+			case message_type::remove: {
+				message_additions--;
+				message_buffer.push_back(m);
+				break;
+			}
+			case message_type::update: {
+				message_buffer.push_back(m);
+			}
+			default: throw;
+			}
+		}
+
+		void erase_message(const message& m) {
+			switch (m.type) {
+			case message_type::insert: {
+				message_additions--;
+				message_buffer.erase(message_buffer.begin());
+				break;
+			}
+			case message_type::remove: {
+				message_additions--;
+				message_buffer.erase(message_buffer.begin());
+				break;
+			}
+			case message_type::update: {
+				message_buffer.erase(message_buffer.begin());
+			}
+			default: throw;
+			}
+		}
+
 
 		void update_counters() {
 			uint64_t ps = 0;
@@ -991,7 +1019,6 @@ namespace be {
 		}
 
 	private:
-
 		/*
 		 * new element between elements i and i+1
 		 */
@@ -1242,7 +1269,7 @@ namespace be {
 
 				assert(k == right_children_l.size());
 
-				right = new node(right_children_l, parent, rank() + 1);
+				right = new node(right_children_l, message_buffer.capacity(), parent, rank() + 1);
 				leaves.erase(leaves.begin() + nr_children / 2, leaves.end());
 
 			}
@@ -1257,32 +1284,26 @@ namespace be {
 
 				assert(k == right_children_n.size());
 
-				right = new node(right_children_n, parent, rank() + 1);
+				right = new node(right_children_n, message_buffer.capacity(), parent, rank() + 1);
 
 				children.erase(children.begin() + nr_children / 2, children.end());
 
 			}
 
 			nr_children = nr_children / 2;
-			update_counters();
 
-			vector<message> buffer1;
-			vector<message> buffer2;
+			message_additions = 0;
 
 			for (auto& message : message_buffer) {
 				if (message.index < size()) {
-					buffer1.push_back(message);
+					add_message(message);
 				}
 				else {
-					buffer2.push_back(insert_message(message.index - size(), message.value));
+					right->add_message(insert_message(message.index - size(), message.value));
 				}
 			}
 
-			message_buffer = buffer1;
-			right->message_buffer = buffer2;
-
 			return right;
-
 		}
 
 		bool leaf_is_full(leaf_type* l) {
@@ -1310,6 +1331,8 @@ namespace be {
 		uint32_t nr_children = 0; 	//number of subtrees
 
 		bool has_leaves_ = false;	//if true, leaves array is nonempty and children is empty
+
+		int64_t message_additions = 0;
 
 	private:
 
@@ -1661,7 +1684,7 @@ namespace be {
 					cc.insert(cc.end(), next->children.begin(), next->children.end());
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(cc, prev->parent, prev->rank());
+					xy = new node(cc, message_buffer.capacity(), prev->parent, prev->rank());
 				}
 				else {
 					assert(prev->nr_children == prev->leaves.size());
@@ -1677,7 +1700,7 @@ namespace be {
 					}
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(cc, prev->parent, prev->rank());
+					xy = new node(cc, message_buffer.capacity(), prev->parent, prev->rank());
 				}
 
 				//update xy->parent

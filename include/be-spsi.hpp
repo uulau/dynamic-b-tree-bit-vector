@@ -62,9 +62,9 @@ namespace be {
 			 * create empty spsi. Input parameters are not used (legacy option). This structure
 			 * does not need a max size, and width is automatically detected.
 			 */
-			spsi(uint64_t max_len = 0, uint64_t width = 0) {
+			spsi(uint64_t max_len = 0, uint64_t width = 0, uint64_t message_count = 20) {
 
-				root = new node<leaf_type, B, B_LEAF>();
+				root = new node<leaf_type, B, B_LEAF>(message_count);
 
 			}
 
@@ -184,20 +184,6 @@ namespace be {
 
 			}
 
-			void old_insert(uint64_t i, uint64_t x) {
-
-				assert(i <= root->size());
-
-				node<leaf_type, B, B_LEAF>* new_root = root->insert(i, x);
-
-				if (new_root != NULL) {
-
-					root = new_root;
-
-				}
-
-			}
-
 			/*
 			 * remove the integer x at position i
 			 */
@@ -224,12 +210,6 @@ namespace be {
 
 				assert(root != NULL);
 				return root->size();
-			}
-
-			uint64_t size_no_messages() const {
-
-				assert(root != NULL);
-				return root->size_no_messages();
 			}
 
 			/*

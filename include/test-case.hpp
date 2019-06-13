@@ -98,19 +98,19 @@ vector<message> generate_ram_test(uint64_t operations, double insert_ratio, doub
 	return messages;
 }
 
-template<class T> void execute_test(const vector<message>& messages, succinct_bitvector<T> bv) {
+template<class K> void execute_test(const vector<message>& messages, K tree) {
 	for (message message : messages) {
 		if (message.type == message_type::insert) {
-			bv.insert(message.index, message.value);
+			tree.insert(message.index, message.value);
 		}
 		else if (message.type == message_type::query) {
-			bv.at(message.index);
+			tree.at(message.index);
 		}
 		else if (message.type == message_type::remove) {
-			bv.remove(message.index);
+			tree.remove(message.index);
 		}
 		else if (message.type == message_type::update) {
-			bv.set(message.index, message.value);
+			tree.set(message.index, message.value);
 		}
 		else {
 			throw "Invalid message type.";

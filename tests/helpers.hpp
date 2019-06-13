@@ -6,12 +6,12 @@
 #include "packed_vector.hpp"
 
 // templates: leaf type, leaf size, node fanout
-typedef b::spsi<packed_vector, 9, 1> btree;
-typedef bb::spsi<packed_vector, 8192, 16> bbtree;
-typedef be::spsi<packed_vector, 9, 1> betree;
+typedef b::spsi<packed_vector, 256, 16> btree;
+typedef bb::spsi<packed_vector, 256, 16> bbtree;
+typedef be::spsi<packed_vector, 256, 16> betree;
 
 template<class T> T* generate_tree(int amount) {
-	auto tree = new T();
+	auto tree = new T(0, 0, 1000);
 
 	for (int i = 0; i < amount; i++) {
 		tree->push_back(i);
@@ -30,12 +30,16 @@ template <class T> void insert_test(int size) {
 	auto tree = generate_tree<T>(size);
 	for (int i = 0; i <= size; i++) {
 		tree->insert(i, size - i);
+	}
+
+	for (int i = 0; i <= size; i++) {
 		auto val = tree->at(i);
 		EXPECT_EQ(val, size - i);
 		if (val != size - i) {
 			break;
 		}
 	}
+
 	delete tree;
 }
 

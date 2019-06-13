@@ -7,14 +7,18 @@
 #include "succinct_bitvector.hpp"
 #include "test-case.hpp"
 
-typedef succinct_bitvector<b::spsi<packed_vector, 8192, 16>> succ_bitvector;
-typedef succinct_bitvector<bb::spsi<packed_vector, 8192, 16>> bb_succ_bitvector;
+typedef b::spsi<packed_vector, 8192, 16> btree;
+typedef bb::spsi<packed_vector, 8192, 16> bbtree;
+typedef be::spsi<packed_vector, 8192, 16> betree;
+
+static int UNIT_MAX = 8 << 15;
+static int BUFFER_MAX = 8 << 12;
 
 static void BTreeInsertion(benchmark::State& state) {
 	for (auto _ : state) {
-		succ_bitvector bv;
+		btree bv;
 		for (int i = 0; i < state.range(0); i++) {
-			bv.insert(i, false);
+			bv.insert(i, state.range(0) - i);
 		}
 	}
 }
@@ -22,20 +26,29 @@ BENCHMARK(BTreeInsertion)->Range(8, 8 << 10);
 
 static void BBTreeInsertion(benchmark::State& state) {
 	for (auto _ : state) {
-		bb_succ_bitvector bv;
-		bv.spsi_.init_messages(state.range(1));
+		auto bv = bbtree(0, 0, state.range(1));
 		for (int i = 0; i < state.range(0); i++) {
-			bv.insert(i, false);
+			bv.insert(i, state.range(0) - i);
 		}
 	}
 }
-BENCHMARK(BBTreeInsertion)->Ranges({ { 1, 8 << 10 }, { 1, 8 << 10 } });
+BENCHMARK(BBTreeInsertion)->Ranges({ { 1, UNIT_MAX }, { 1, BUFFER_MAX } });
+
+static void BETreeInsertion(benchmark::State& state) {
+	for (auto _ : state) {
+		auto bv = betree(0, 0, state.range(1));
+		for (int i = 0; i < state.range(0); i++) {
+			bv.insert(i, state.range(0) - i);
+		}
+	}
+}
+BENCHMARK(BETreeInsertion)->Ranges({ { 1, UNIT_MAX }, { 1, BUFFER_MAX } });
 
 static void BTreeQuery(benchmark::State& state) {
-	succ_bitvector bv;
+	btree bv;
 
 	for (int i = 0; i < state.range(0); i++) {
-		bv.insert(i, false);
+		bv.insert(i, state.range(0) - i);
 	}
 
 	for (auto _ : state) {
@@ -44,14 +57,13 @@ static void BTreeQuery(benchmark::State& state) {
 		}
 	}
 }
-BENCHMARK(BTreeQuery)->Range(8, 8 << 10);
+BENCHMARK(BTreeQuery)->Range(1, UNIT_MAX);
 
 static void BBTreeQuery(benchmark::State& state) {
-	bb_succ_bitvector bv;
-	bv.spsi_.init_messages(state.range(1));
+	auto bv = bbtree(0, 0, state.range(1));
 
 	for (int i = 0; i < state.range(0); i++) {
-		bv.insert(i, false);
+		bv.insert(i, state.range(0) - i);
 	}
 
 	for (auto _ : state) {
@@ -60,7 +72,22 @@ static void BBTreeQuery(benchmark::State& state) {
 		}
 	}
 }
-BENCHMARK(BBTreeQuery)->Ranges({ { 1, 8 << 10 }, { 1, 8 << 10 } });
+BENCHMARK(BBTreeQuery)->Ranges({ { 1, UNIT_MAX }, { 1, BUFFER_MAX } });
+
+static void BETreeQuery(benchmark::State& state) {
+	auto bv = betree(0, 0, state.range(1));
+
+	for (int i = 0; i < state.range(0); i++) {
+		bv.insert(i, state.range(0) - i);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < state.range(0); i++) {
+			bv.at(i);
+		}
+	}
+}
+BENCHMARK(BETreeQuery)->Ranges({ { 1, UNIT_MAX }, { 1, BUFFER_MAX } });
 
 class OperationFixture : public benchmark::Fixture {
 public:
@@ -75,18 +102,25 @@ public:
 	}
 };
 
-BENCHMARK_F(OperationFixture, BTreeOperations)(benchmark::State& st) {
-	succ_bitvector bv;
-	for (auto _ : st) {
-		execute_test(messages, bv);
-	}
-}
-
-BENCHMARK_F(OperationFixture, BBTreeOperations)(benchmark::State& st) {
-	bb_succ_bitvector bv;
-	for (auto _ : st) {
-		execute_test(messages, bv);
-	}
-}
-
 BENCHMARK_MAIN();
+
+BENCHMARK_F(OperationFixture, BTreeOperations)(benchmark::State& st) {
+	btree bv;
+	for (auto _ : st) {
+		execute_test(messages, bv);
+	}
+}
+
+BENCHMARK_DEFINE_F(OperationFixture, BBTreeOperations)(benchmark::State& st) {
+	bbtree bv;
+	for (auto _ : st) {
+		execute_test(messages, bv);
+	}
+}
+
+BENCHMARK_DEFINE_F(OperationFixture, BETreeOperations)(benchmark::State& st) {
+	betree bv;
+	for (auto _ : st) {
+		execute_test(messages, bv);
+	}
+}

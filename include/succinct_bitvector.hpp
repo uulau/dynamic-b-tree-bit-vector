@@ -244,13 +244,12 @@ namespace dyn {
 			spsi_.load(in);
 
 		}
-		spsi_type spsi_;
-
 	private:
 
 		//underlying Searchable partial sum with inserts structure.
 		//the spsi contains only integers 0 and 1
 		//spsi_type spsi_;
+		spsi_type spsi_;
 
 	};
 
