@@ -238,6 +238,7 @@ namespace be {
 			 */
 			uint64_t at(uint64_t i) const {
 
+				auto d = size();
 				assert(size() > 0);
 				assert(i < size());
 

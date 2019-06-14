@@ -13,48 +13,6 @@ namespace be {
 		}
 
 		/*
-		 * copy constructor
-		 */
-		node(const node& n) {
-
-			subtree_sizes = { n.subtree_sizes };
-			subtree_psums = { n.subtree_psums };
-
-			if (n.has_leaves_) {
-
-				leaves = vector<leaf_type*>(n.nr_children, NULL);
-
-				for (uint64_t i = 0; i < n.nr_children; ++i) {
-
-					leaves[i] = new leaf_type(*n.leaves[i]);
-
-				}
-
-			}
-			else {
-
-				children = vector<node*>(n.nr_children, NULL);
-
-				for (uint64_t i = 0; i < n.nr_children; ++i) {
-
-					children[i] = new node(*n.children[i]);
-					children[i]->overwrite_parent(this);
-
-				}
-
-			}
-
-			node* parent = NULL; 	//NULL for root
-
-			rank_ = n.rank_; 		//rank of this node among its siblings
-
-			nr_children = n.nr_children; 	//number of subtrees
-
-			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty and children is empty
-
-		}
-
-		/*
 		 * create new root node. This node has only 1 (empty) child, which is a leaf.
 		 */
 		node(uint64_t message_count) {
@@ -148,44 +106,6 @@ namespace be {
 			init_message_buffer(message_count);
 
 			leaves = vector<leaf_type*>(c);
-
-		}
-
-		/*
-		 * return bit size of all structures rooted in this node
-		 */
-		uint64_t bit_size() const {
-			uint64_t bs = 8 * sizeof(node);
-
-			bs += subtree_sizes.capacity() * sizeof(uint64_t) * 8;
-
-			bs += subtree_psums.capacity() * sizeof(uint64_t) * 8;
-
-			bs += children.capacity() * sizeof(node*) * 8;
-
-			bs += leaves.capacity() * sizeof(leaf_type*) * 8;
-
-			if (has_leaves()) {
-
-				for (ulint i = 0; i < nr_children; ++i) {
-					assert(leaves[i] != NULL);
-					bs += leaves[i]->bit_size();
-
-				}
-
-			}
-			else {
-
-				for (ulint i = 0; i < nr_children; ++i) {
-
-					assert(children[i] != NULL);
-					bs += children[i]->bit_size();
-
-				}
-
-			}
-
-			return bs;
 
 		}
 
@@ -390,116 +310,6 @@ namespace be {
 		}
 
 		/*
-		 * returns smallest i such that (i+1) + I_0 + ... + I_i >= x
-		 */
-		uint64_t search_r(uint64_t x) {
-
-			assert(x <= psum() + size());
-
-			uint32_t j = 0;
-
-			while (subtree_psums[j] + subtree_sizes[j] < x) {
-
-				j++;
-				assert(j < subtree_psums.size());
-
-			}
-
-			//size/psum stored in previous counter
-			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
-
-			assert(x > previous_psum + previous_size or (x == 0 and (previous_psum + previous_size == 0)));
-
-			//i-th element is in the j-th children
-
-			//if children are leaves, extract psum from j-th leaf
-			if (has_leaves()) {
-
-				return previous_size + leaves[j]->search_r(x - (previous_psum + previous_size));
-
-			}
-
-			//else: recurse on children
-			return previous_size + children[j]->search_r(x - (previous_psum + previous_size));
-
-		}
-
-		bool contains(uint64_t x) {
-
-			if (x == 0) return true;
-
-			assert(x <= psum());
-
-			uint32_t j = 0;
-
-			while (subtree_psums[j] < x or (x == 0 and subtree_psums[j] == 0)) {
-
-				j++;
-				assert(j < subtree_psums.size());
-
-			}
-
-			if (subtree_psums[j] == x) return true;
-
-			//size/psum stored in previous counter
-			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
-
-			assert(x > previous_psum or (x == 0 and previous_psum == 0));
-
-			//i-th element is in the j-th children
-
-			//if children are leaves, extract psum from j-th leaf
-			if (has_leaves()) {
-
-				return leaves[j]->contains(x - previous_psum);
-
-			}
-
-			//else: recurse on children
-			return children[j]->contains(x - previous_psum);
-
-		}
-
-		bool contains_r(uint64_t x) {
-
-			if (x == 0) return true;
-
-			assert(x <= psum() + size());
-
-			uint32_t j = 0;
-
-			while (subtree_psums[j] + subtree_sizes[j] < x) {
-
-				j++;
-				assert(j < subtree_psums.size());
-
-			}
-
-			if (subtree_psums[j] + subtree_sizes[j] == x) return true;
-
-			//size/psum stored in previous counter
-			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
-
-			assert(x > previous_psum + previous_size or (x + previous_psum + previous_size == 0));
-
-			//i-th element is in the j-th children
-
-			//if children are leaves, extract psum from j-th leaf
-			if (has_leaves()) {
-
-				return leaves[j]->contains_r(x - (previous_psum + previous_size));
-
-			}
-
-			//else: recurse on children
-			return children[j]->contains_r(x - (previous_psum + previous_size));
-
-		}
-
-		/*
 		 * increment or decrement i-th integer by delta
 		 */
 		void increment(uint64_t i, uint64_t delta, bool subtract = false) {
@@ -598,6 +408,7 @@ namespace be {
 		 *
 		 */
 		node* insert(uint64_t i, uint64_t x) {
+			auto d = size();
 			assert(i <= size());
 			//assert(is_root() || not parent->is_full());
 
@@ -747,17 +558,15 @@ namespace be {
 		}
 
 		uint64_t size() {
-			return size_no_messages() + message_additions;
+			return size_no_messages() + insert_messages - remove_messages;
 		}
 
 		uint64_t messages_sum() {
-			if (has_leaves()) {
-				return 0;
-			}
+			if (has_leaves()) return 0;
 
 			uint64_t sum = 0;
 
-			for (message message : message_buffer) {
+			for (const auto& message : message_buffer) {
 				if (message.type == message_type::insert) {
 					sum += message.value;
 				}
@@ -780,112 +589,6 @@ namespace be {
 
 		uint32_t number_of_children() {
 			return nr_children;
-		}
-
-		ulint serialize(ostream& out) const {
-
-			ulint w_bytes = 0;
-			ulint subtree_sizes_len = subtree_sizes.size();
-			ulint subtree_psums_len = subtree_psums.size();
-			ulint children_len = children.size();
-			ulint leaves_len = leaves.size();
-
-
-			out.write((char*)& subtree_sizes_len, sizeof(subtree_sizes_len));
-			w_bytes += sizeof(subtree_sizes_len);
-
-			out.write((char*)& subtree_psums_len, sizeof(subtree_psums_len));
-			w_bytes += sizeof(subtree_psums_len);
-
-			out.write((char*)& children_len, sizeof(children_len));
-			w_bytes += sizeof(children_len);
-
-			out.write((char*)& leaves_len, sizeof(leaves_len));
-			w_bytes += sizeof(leaves_len);
-
-
-			out.write((char*)subtree_sizes.data(), sizeof(uint64_t) * subtree_sizes_len);
-			w_bytes += sizeof(uint64_t) * subtree_sizes_len;
-
-			out.write((char*)subtree_psums.data(), sizeof(uint64_t) * subtree_psums_len);
-			w_bytes += sizeof(uint64_t) * subtree_psums_len;
-
-			out.write((char*)& has_leaves_, sizeof(has_leaves_));
-			w_bytes += sizeof(has_leaves_);
-
-			if (has_leaves_) {
-
-				for (auto l : leaves) w_bytes += l->serialize(out);
-
-			}
-			else {
-
-				for (auto c : children) w_bytes += c->serialize(out);
-
-			}
-
-			out.write((char*)& rank_, sizeof(rank_));
-			w_bytes += sizeof(rank_);
-
-			out.write((char*)& nr_children, sizeof(nr_children));
-			w_bytes += sizeof(nr_children);
-
-			return w_bytes;
-
-		}
-
-		void load(istream& in) {
-
-			ulint subtree_sizes_len;
-			ulint subtree_psums_len;
-			ulint children_len;
-			ulint leaves_len;
-
-			in.read((char*)& subtree_sizes_len, sizeof(subtree_sizes_len));
-
-			in.read((char*)& subtree_psums_len, sizeof(subtree_psums_len));
-
-			in.read((char*)& children_len, sizeof(children_len));
-
-			in.read((char*)& leaves_len, sizeof(leaves_len));
-
-			assert(subtree_sizes_len > 0);
-			assert(subtree_psums_len > 0);
-
-			subtree_sizes = vector<uint64_t>(subtree_sizes_len);
-			in.read((char*)subtree_sizes.data(), sizeof(uint64_t) * subtree_sizes_len);
-
-			subtree_psums = vector<uint64_t>(subtree_psums_len);
-			in.read((char*)subtree_psums.data(), sizeof(uint64_t) * subtree_psums_len);
-
-
-			in.read((char*)& has_leaves_, sizeof(has_leaves_));
-
-
-			if (has_leaves_) {
-
-				assert(leaves_len > 0);
-				leaves = vector<leaf_type*>(leaves_len);
-
-				for (auto& l : leaves) l = new leaf_type();
-				for (auto& l : leaves) l->load(in);
-
-			}
-			else {
-
-				assert(children_len > 0);
-				children = vector<node*>(children_len);
-
-				for (auto& c : children) c = new node();
-				for (auto& c : children) c->overwrite_parent(this);
-				for (auto& c : children) c->load(in);
-
-			}
-
-			in.read((char*)& rank_, sizeof(rank_));
-
-			in.read((char*)& nr_children, sizeof(nr_children));
-
 		}
 
 		node* create_message(const message& m) {
@@ -920,12 +623,10 @@ namespace be {
 				auto value = message.value;
 				auto type = message.type;
 
-				auto j = nr_children - 1;
-				if (index < size() - message_buffer.size()) {
-					j = 0;
-					while (subtree_sizes[j] <= index) {
-						j++;
-					}
+				auto j = 0;
+
+				while (subtree_sizes[j] < index) {
+					j++;
 				}
 
 				auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
@@ -955,12 +656,12 @@ namespace be {
 		void add_message(const message& m) {
 			switch (m.type) {
 			case message_type::insert: {
-				message_additions++;
+				insert_messages++;
 				message_buffer.push_back(m);
 				break;
 			}
 			case message_type::remove: {
-				message_additions--;
+				remove_messages++;
 				message_buffer.push_back(m);
 				break;
 			}
@@ -974,12 +675,12 @@ namespace be {
 		void erase_message(const message& m) {
 			switch (m.type) {
 			case message_type::insert: {
-				message_additions--;
+				insert_messages--;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
 			case message_type::remove: {
-				message_additions--;
+				remove_messages--;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
@@ -1264,8 +965,9 @@ namespace be {
 
 				ulint k = 0;
 
-				for (uint32_t i = nr_children / 2; i < nr_children; ++i)
+				for (uint32_t i = nr_children / 2; i < nr_children; ++i) {
 					right_children_l[k++] = leaves[i];
+				}
 
 				assert(k == right_children_l.size());
 
@@ -1279,8 +981,9 @@ namespace be {
 
 				ulint k = 0;
 
-				for (uint32_t i = nr_children / 2; i < nr_children; ++i)
+				for (uint32_t i = nr_children / 2; i < nr_children; ++i) {
 					right_children_n[k++] = children[i];
+				}
 
 				assert(k == right_children_n.size());
 
@@ -1292,9 +995,12 @@ namespace be {
 
 			nr_children = nr_children / 2;
 
-			message_additions = 0;
+			vector<message> mb(message_buffer);
+			message_buffer.clear();
+			insert_messages = 0;
+			remove_messages = 0;
 
-			for (auto& message : message_buffer) {
+			for (message message : mb) {
 				if (message.index < size()) {
 					add_message(message);
 				}
@@ -1332,7 +1038,8 @@ namespace be {
 
 		bool has_leaves_ = false;	//if true, leaves array is nonempty and children is empty
 
-		int64_t message_additions = 0;
+		int64_t insert_messages = 0;
+		int64_t remove_messages = 0;
 
 	private:
 
@@ -1736,8 +1443,6 @@ namespace be {
 						cc->overwrite_rank(r++);
 					}
 				}
-
-
 
 				delete xy;
 				//y has been merged into x, so needs to be de-allocated.

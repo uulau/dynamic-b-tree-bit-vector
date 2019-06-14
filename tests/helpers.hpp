@@ -11,7 +11,7 @@ typedef bb::spsi<packed_vector, 256, 16> bbtree;
 typedef be::spsi<packed_vector, 256, 16> betree;
 
 template<class T> T* generate_tree(uint64_t amount) {
-	auto tree = new T(0, 0, 100);
+	auto tree = new T(0, 0, 10);
 
 	for (int i = 0; i < amount; i++) {
 		tree->push_back(i);
@@ -27,13 +27,10 @@ template <class T> void size_test(uint64_t size) {
 }
 
 template <class T> void insert_test(uint64_t size) {
-	auto tree = generate_tree<T>(size);
+	auto tree = generate_tree<T>(0);
 
 	for (auto i = 0; i <= size; i++) {
 		tree->insert(i, size - i);
-	}
-
-	for (auto i = 0; i <= size; i++) {
 		auto val = tree->at(i);
 		EXPECT_EQ(val, size - i);
 		if (val != size - i) {

@@ -16,35 +16,35 @@ namespace dyn {
 		uint64_t value;
 	};
 
-	message insert_message(int64_t index, int64_t value) {
-		auto val = message();
-		val.type = message_type::insert;
-		val.index = index;
-		val.value = value;
-		return val;
+	message& insert_message(int64_t index, int64_t value) {
+		auto val = new message();
+		val->type = message_type::insert;
+		val->index = index;
+		val->value = value;
+		return *val;
 	}
 
-	message remove_message(int64_t index) {
-		auto val = message();
-		val.type = message_type::remove;
-		val.index = index;
-		val.value = NULL;
-		return val;
+	message& remove_message(int64_t index) {
+		auto val = new message();
+		val->type = message_type::remove;
+		val->index = index;
+		val->value = NULL;
+		return *val;
 	}
 
-	message query_message(int64_t index) {
-		auto val = message();
-		val.type = message_type::query;
-		val.index = index;
-		val.value = NULL;
-		return val;
+	message& query_message(int64_t index) {
+		auto val = new message();
+		val->type = message_type::query;
+		val->index = index;
+		val->value = NULL;
+		return *val;
 	}
 
-	message update_message(int64_t index, int64_t value) {
-		auto val = message();
-		val.type = message_type::update;
-		val.index = index;
-		val.value = value;
-		return val;
+	message& update_message(int64_t index, int64_t value) {
+		auto val = new message();
+		val->type = message_type::update;
+		val->index = index;
+		val->value = value;
+		return *val;
 	}
 }
