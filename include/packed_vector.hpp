@@ -8,7 +8,7 @@
 #ifndef INTERNAL_PACKED_BLOCK_HPP_
 #define INTERNAL_PACKED_BLOCK_HPP_
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) and !defined (__clang__)
 #include <intrin.h>
 #endif
 
@@ -148,7 +148,7 @@ namespace dyn {
 
 		}
 
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) and !defined (__clang__)
 		int __builtin_popcountll(uint64_t num) {
 			return __popcnt64(num);
 		}
@@ -552,8 +552,6 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-
-			uint64_t prev_size = size_;
 
 			uint64_t tot_words = (size_ / int_per_word_) + (size_ % int_per_word_ != 0);
 

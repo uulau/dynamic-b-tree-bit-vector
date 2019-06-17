@@ -10,16 +10,10 @@
 using namespace std;
 using namespace dyn;
 
-void generate_test(uint64_t operations, double insert_ratio, double query_ratio);
-
-vector<message> read_test();
-
 void generate_test(uint64_t operations, double insert_ratio, double query_ratio) {
 	assert(insert_ratio + query_ratio == 1);
 	assert(operations > 0);
 
-	auto insert_count = operations * insert_ratio;
-	auto query_count = operations * query_ratio;
 	// Seed random number generator with time
 	srand(time(0));
 	auto insert_counter = 0;
@@ -42,7 +36,7 @@ void generate_test(uint64_t operations, double insert_ratio, double query_ratio)
 	file.close();
 }
 
-vector<message> read_test() {
+const vector<message> read_test() {
 	vector<message> messages;
 	ifstream file("..\\test.txt");
 
@@ -72,34 +66,32 @@ vector<message> read_test() {
 	return messages;
 }
 
-vector<message>& generate_ram_test(uint64_t operations, double insert_ratio, double query_ratio) {
+const vector<message> generate_ram_test(uint64_t operations, double insert_ratio, double query_ratio) {
 	assert(insert_ratio + query_ratio == 1);
 	assert(operations > 0);
 
-	auto messages = new vector<message>;
-	auto insert_count = operations * insert_ratio;
-	auto query_count = operations * query_ratio;
+	auto messages = vector<message>();
 	// Seed random number generator with time
 	srand(time(0));
 	auto insert_counter = 0;
 	for (auto i = 0; i < operations; i++) {
 		auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
 		if (insert) {
-			auto position = rand() % (insert_counter + 1);
-			auto bit = rand() % 2;
-			messages->push_back(insert_message(position, bit));
+			const auto position = rand() % (insert_counter + 1);
+			const auto bit = rand() % 2;
+			messages.push_back(insert_message(position, bit));
 			insert_counter++;
 		}
 		else {
-			auto position = rand() % (insert_counter);
-			messages->push_back(query_message(position));
+			const auto position = rand() % (insert_counter);
+			messages.push_back(query_message(position));
 		}
 	}
-	return *messages;
+	return messages;
 }
 
-template<class K> void execute_test(const vector<message>& messages, K tree) {
-	for (message message : messages) {
+template<class K> void execute_test(vector<message> messages, K tree) {
+	for (const auto& message : messages) {
 		if (message.type == message_type::insert) {
 			tree.insert(message.index, message.value);
 		}

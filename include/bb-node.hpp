@@ -212,7 +212,6 @@ namespace bb {
 		uint64_t at(uint64_t i, const vector<message>* mbuffer = NULL) {
 
 			if (mbuffer) {
-				int counter = 0;
 				for (auto x = mbuffer->rbegin(); x != mbuffer->rend(); x++) {
 					auto message = *x;
 					if (message.type == message_type::insert && message.index == i) {
@@ -650,7 +649,6 @@ namespace bb {
 		 *
 		 */
 		node* remove(uint64_t i) {
-			auto d = size();
 			assert(i < size());
 			assert(is_root() || parent->can_lose());
 

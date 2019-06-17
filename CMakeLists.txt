@@ -7,6 +7,10 @@ project ("DynamicBTreeBitVector" VERSION 1.0 DESCRIPTION "Benchmarks different B
 include(FetchContent)
 include(CTest)
 
+# Link runtime statically for ASAN
+#set(CMAKE_CXX_FLAGS_RELEASE "/MT")
+#set(CMAKE_CXX_FLAGS_DEBUG "/MT")
+
 FetchContent_Declare(
   googletest
   GIT_REPOSITORY https://github.com/google/googletest.git
@@ -25,6 +29,7 @@ if(NOT googletest_POPULATED)
   # Prevent overriding the parent project's compiler/linker
   # settings on Windows
   set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+  set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
   add_subdirectory(${googletest_SOURCE_DIR} ${googletest_BINARY_DIR} EXCLUDE_FROM_ALL)
 endif()
 

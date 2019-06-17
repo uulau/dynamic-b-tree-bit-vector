@@ -5,19 +5,10 @@
 
 using namespace std;
 
-void generate_test(uint64_t operations, double insert_ratio, double query_ratio);
-
-int main()
-{
-	generate_test(1000000, 0.1, 0.9);
-}
-
 void generate_test(uint64_t operations, double insert_ratio, double query_ratio) {
 	assert(insert_ratio + query_ratio == 1);
 	assert(operations > 0);
 
-	auto insert_count = operations * insert_ratio;
-	auto query_count = operations * query_ratio;
 	// Seed random number generator with time
 	srand(time(0));
 	auto insert_counter = 0;
@@ -38,4 +29,9 @@ void generate_test(uint64_t operations, double insert_ratio, double query_ratio)
 		}
 	}
 	file.close();
+}
+
+int main()
+{
+	generate_test(1000000, 0.1, 0.9);
 }

@@ -45,11 +45,11 @@ public:
 	vector<message> messages;
 
 	void SetUp(const ::benchmark::State& state) {
-		messages = generate_ram_test(1000000, 0.1, 0.9);
+		messages = generate_ram_test(1000000, 0.05, 0.95);
 	}
 
 	void TearDown(const ::benchmark::State& state) {
-		messages.clear();
+		// Nothing
 	}
 };
 

@@ -12,6 +12,46 @@ namespace be {
 			message_buffer.reserve(message_count);
 		}
 
+		node(const node& n) {
+
+			subtree_sizes = { n.subtree_sizes };
+			subtree_psums = { n.subtree_psums };
+
+			if (n.has_leaves_) {
+
+				leaves = vector<leaf_type*>(n.nr_children, NULL);
+
+				for (uint64_t i = 0; i < n.nr_children; ++i) {
+
+					leaves[i] = new leaf_type(*n.leaves[i]);
+
+				}
+
+			}
+			else {
+
+				children = vector<node*>(n.nr_children, NULL);
+
+				for (uint64_t i = 0; i < n.nr_children; ++i) {
+
+					children[i] = new node(*n.children[i]);
+					children[i]->overwrite_parent(this);
+
+				}
+
+			}
+
+			node* parent = NULL; 	//NULL for root
+
+			rank_ = n.rank_; 		//rank of this node among its siblings
+
+			nr_children = n.nr_children; 	//number of subtrees
+
+			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty and children is empty
+
+			message_buffer = n.message_buffer;
+		}
+
 		/*
 		 * create new root node. This node has only 1 (empty) child, which is a leaf.
 		 */
@@ -109,34 +149,43 @@ namespace be {
 
 		}
 
-		bool has_leaves() const {
+		const bool has_leaves() const {
 
 			return has_leaves_;
 
 		}
 
 		void free_mem() {
-
 			if (has_leaves()) {
-
-				for (uint32_t i = 0; i < nr_children; ++i) delete leaves[i];
-
+				free_leaves();
 			}
 			else {
-
-				for (uint32_t i = 0; i < nr_children; ++i) children[i]->free_mem();
-				for (uint32_t i = 0; i < nr_children; ++i) delete children[i];
+				free_children();
 			}
+		}
 
+		void free_leaves() {
+			for (uint32_t i = 0; i < nr_children; ++i) {
+				delete leaves[i];
+			}
+		}
+
+		void free_children() {
+			for (uint32_t i = 0; i < nr_children; ++i) {
+				children[i]->free_mem();
+			}
+			for (uint32_t i = 0; i < nr_children; ++i) {
+				delete children[i];
+			}
 		}
 
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		uint64_t at(uint64_t i, vector<message>* messages = NULL) {
+		const uint64_t at(uint64_t i, vector<message>* messages = NULL) {
 
 			int counter = 0;
-			for (message& message : message_buffer) {
+			for (const auto& message : message_buffer) {
 				if (message.index <= i) {
 					if (message.index == i && message.type == message_type::insert) {
 						return message.value;
@@ -146,7 +195,7 @@ namespace be {
 			}
 
 			if (messages && has_leaves()) {
-				for (message& message : *messages) {
+				for (const auto& message : *messages) {
 					if (message.type == message_type::insert) {
 						counter--;
 					}
@@ -191,6 +240,7 @@ namespace be {
 			}
 
 			//else: recurse on children
+
 			return children[j]->at(i - previous_size, messages);
 
 		}
@@ -198,7 +248,7 @@ namespace be {
 		/*
 		 * returns sum up to i-th integer included
 		 */
-		uint64_t psum(uint64_t i) {
+		const uint64_t psum(uint64_t i) {
 
 			assert(i < size());
 
@@ -234,7 +284,7 @@ namespace be {
 		/*
 		 * returns smallest i such that I_0 + ... + I_i >= x
 		 */
-		uint64_t search(uint64_t x) {
+		const uint64_t search(uint64_t x) {
 
 			assert(x <= psum());
 
@@ -408,7 +458,6 @@ namespace be {
 		 *
 		 */
 		node* insert(uint64_t i, uint64_t x) {
-			auto d = size();
 			assert(i <= size());
 			//assert(is_root() || not parent->is_full());
 
@@ -494,9 +543,23 @@ namespace be {
 		 *
 		 */
 		node* remove(uint64_t i) {
-			auto d = size();
 			assert(i < size_no_messages());
 			assert(is_root() || parent->can_lose());
+
+			node* p = this;
+
+			while (p->parent) {
+				auto rank = p->rank();
+				p = p->parent;
+				uint64_t sum = 0;
+				for (int a = 0; a < rank; a++) {
+					sum += p->subtree_sizes[a];
+				}
+				i += sum;
+				if (!p->can_lose()) {
+					p->ensure_can_lose(i);
+				}
+			}
 
 			node* x = this;
 
@@ -523,24 +586,14 @@ namespace be {
 
 			i = i - previous_size;
 			assert(i >= 0);
-			if (this->has_leaves()) {
-				remove_leaf_index(i, j);
-			}
-			else {
-
-				children[j]->remove(i);
-			}
-
+			remove_leaf_index(i, j);
 			node* new_root = NULL;
 
-			//After removal, check if root needs to be updated
-			if (is_root()) {
-				if (not has_leaves()) {
-					//if root has only one child, make that child the root
-					if (nr_children == 1) {
-						new_root = this->children[0];
-						new_root->parent = NULL;
-					}
+			if (not p->has_leaves()) {
+				//if root has only one child, make that child the root
+				if (p->nr_children == 1) {
+					new_root = p->children[0];
+					new_root->parent = NULL;
 				}
 			}
 			return new_root;
@@ -591,7 +644,7 @@ namespace be {
 			return nr_children;
 		}
 
-		node* create_message(const message& m) {
+		node* create_message(const message m) {
 			node* new_root = NULL;
 			if (has_leaves()) {
 				if (m.type == message_type::insert) {
@@ -618,10 +671,9 @@ namespace be {
 		node* flush_messages() {
 			node* new_root = NULL;
 			while (!message_buffer.empty()) {
-				message message = message_buffer[0];
-				auto index = message.index;
-				auto value = message.value;
-				auto type = message.type;
+				auto index = message_buffer[0].index;
+				auto value = message_buffer[0].value;
+				auto type = message_buffer[0].type;
 
 				auto j = 0;
 
@@ -633,7 +685,7 @@ namespace be {
 
 				auto i = index - previous_size;
 
-				erase_message(message);
+				erase_message(message_buffer[0]);
 
 				auto messages = message_buffer.size();
 
@@ -653,7 +705,7 @@ namespace be {
 			return new_root;
 		}
 
-		void add_message(const message& m) {
+		void add_message(const message m) {
 			switch (m.type) {
 			case message_type::insert: {
 				insert_messages++;
@@ -672,7 +724,7 @@ namespace be {
 			}
 		}
 
-		void erase_message(const message& m) {
+		void erase_message(const message m) {
 			switch (m.type) {
 			case message_type::insert: {
 				insert_messages--;
@@ -1000,7 +1052,7 @@ namespace be {
 			insert_messages = 0;
 			remove_messages = 0;
 
-			for (message message : mb) {
+			for (const auto& message : mb) {
 				if (message.index < size()) {
 					add_message(message);
 				}

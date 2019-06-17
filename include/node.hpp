@@ -625,7 +625,6 @@ namespace b {
 		 *
 		 */
 		node* remove(uint64_t i) {
-			auto d = size();
 			assert(i < size());
 			assert(is_root() || parent->can_lose());
 

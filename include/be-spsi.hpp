@@ -188,7 +188,7 @@ namespace be {
 			 * remove the integer x at position i
 			 */
 			void remove(uint64_t i) {
-				node<leaf_type, B, B_LEAF>* new_root = root->remove(i);
+				node<leaf_type, B, B_LEAF>* new_root = root->create_message(remove_message(i));
 				if (new_root != NULL) {
 					delete root;
 					root = new_root;
@@ -238,11 +238,12 @@ namespace be {
 			 */
 			uint64_t at(uint64_t i) const {
 
-				auto d = size();
 				assert(size() > 0);
 				assert(i < size());
 
-				return root->at(i, &vector<message>());
+				auto returnable = new vector<message>();
+
+				return root->at(i, returnable);
 			}
 
 			/*
@@ -282,7 +283,7 @@ namespace be {
 
 			void load(istream& in) {
 
-				root = new node();
+				root = new node<leaf_type, B, B_LEAF>();
 				root->load(in);
 
 			}

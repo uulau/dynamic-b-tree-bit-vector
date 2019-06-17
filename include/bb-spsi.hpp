@@ -280,7 +280,7 @@ namespace bb {
 
 			void load(istream& in) {
 
-				root = new node();
+				root = new node<leaf_type, B, B_LEAF>();
 				root->load(in);
 
 			}
@@ -307,9 +307,8 @@ namespace bb {
 							root = new_root;
 						}
 					}
-
-					message_buffer.clear();
 				}
+				message_buffer.clear();
 			}
 
 

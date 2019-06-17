@@ -268,7 +268,7 @@ namespace b {
 
 			void load(istream& in) {
 
-				root = new node();
+				root = new node<leaf_type, B, B_LEAF>();
 				root->load(in);
 
 			}
