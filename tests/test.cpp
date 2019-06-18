@@ -120,125 +120,125 @@ TEST(BEpsilonTree, Search100000) {
 	search_test<betree>(100000);
 }
 
-TEST(BufferedBTree, Insertion10) {
-	insert_test<bbtree>(10);
-}
-
-TEST(BufferedBTree, Insertion100) {
-	insert_test<bbtree>(100);
-}
-
-TEST(BufferedBTree, Insertion1000) {
-	insert_test<bbtree>(1000);
-}
-
-TEST(BufferedBTree, Insertion10000) {
-	insert_test<bbtree>(10000);
-}
-
-TEST(BufferedBTree, Insertion100000) {
-	insert_test<bbtree>(100000);
-}
-
-TEST(BufferedBTree, Sum10) {
-	sum_test<bbtree>(10);
-}
-
-TEST(BufferedBTree, Sum100) {
-	sum_test<bbtree>(100);
-}
-
-TEST(BufferedBTree, Sum1000) {
-	sum_test<bbtree>(1000);
-}
-
-TEST(BufferedBTree, Sum10000) {
-	sum_test<bbtree>(10000);
-}
-
-TEST(BufferedBTree, Sum100000) {
-	sum_test<bbtree>(100000);
-}
-
-TEST(BufferedBTree, Size10) {
-	size_test<bbtree>(10);
-}
-
-TEST(BufferedBTree, Size100) {
-	size_test<bbtree>(100);
-}
-
-TEST(BufferedBTree, Size1000) {
-	size_test<bbtree>(1000);
-}
-
-TEST(BufferedBTree, Size10000) {
-	size_test<bbtree>(10000);
-}
-
-TEST(BufferedBTree, Size100000) {
-	size_test<bbtree>(100000);
-}
-
-TEST(BufferedBTree, Remove10) {
-	remove_test<bbtree>(10);
-}
-
-TEST(BufferedBTree, Remove100) {
-	remove_test<bbtree>(100);
-}
-
-TEST(BufferedBTree, Remove1000) {
-	remove_test<bbtree>(1000);
-}
-
-TEST(BufferedBTree, Remove10000) {
-	remove_test<bbtree>(10000);
-}
-
-TEST(BufferedBTree, Remove100000) {
-	remove_test<bbtree>(100000);
-}
-
-TEST(BufferedBTree, Update10) {
-	update_test<bbtree>(10);
-}
-
-TEST(BufferedBTree, Update100) {
-	update_test<bbtree>(100);
-}
-
-TEST(BufferedBTree, Update1000) {
-	update_test<bbtree>(1000);
-}
-
-TEST(BufferedBTree, Update10000) {
-	update_test<bbtree>(10000);
-}
-
-TEST(BufferedBTree, Update100000) {
-	update_test<bbtree>(100000);
-}
-
-TEST(BufferedBTree, Search10) {
-	search_test<bbtree>(10);
-}
-
-TEST(BufferedBTree, Search100) {
-	search_test<bbtree>(100);
-}
-
-TEST(BufferedBTree, Search1000) {
-	search_test<bbtree>(1000);
-}
-
-TEST(BufferedBTree, Search10000) {
-	search_test<bbtree>(10000);
-}
-
-TEST(BufferedBTree, Search100000) {
-	search_test<bbtree>(100000);
-}
+//TEST(BufferedBTree, Insertion10) {
+//	insert_test<bbtree>(10);
+//}
+//
+//TEST(BufferedBTree, Insertion100) {
+//	insert_test<bbtree>(100);
+//}
+//
+//TEST(BufferedBTree, Insertion1000) {
+//	insert_test<bbtree>(1000);
+//}
+//
+//TEST(BufferedBTree, Insertion10000) {
+//	insert_test<bbtree>(10000);
+//}
+//
+//TEST(BufferedBTree, Insertion100000) {
+//	insert_test<bbtree>(100000);
+//}
+//
+//TEST(BufferedBTree, Sum10) {
+//	sum_test<bbtree>(10);
+//}
+//
+//TEST(BufferedBTree, Sum100) {
+//	sum_test<bbtree>(100);
+//}
+//
+//TEST(BufferedBTree, Sum1000) {
+//	sum_test<bbtree>(1000);
+//}
+//
+//TEST(BufferedBTree, Sum10000) {
+//	sum_test<bbtree>(10000);
+//}
+//
+//TEST(BufferedBTree, Sum100000) {
+//	sum_test<bbtree>(100000);
+//}
+//
+//TEST(BufferedBTree, Size10) {
+//	size_test<bbtree>(10);
+//}
+//
+//TEST(BufferedBTree, Size100) {
+//	size_test<bbtree>(100);
+//}
+//
+//TEST(BufferedBTree, Size1000) {
+//	size_test<bbtree>(1000);
+//}
+//
+//TEST(BufferedBTree, Size10000) {
+//	size_test<bbtree>(10000);
+//}
+//
+//TEST(BufferedBTree, Size100000) {
+//	size_test<bbtree>(100000);
+//}
+//
+//TEST(BufferedBTree, Remove10) {
+//	remove_test<bbtree>(10);
+//}
+//
+//TEST(BufferedBTree, Remove100) {
+//	remove_test<bbtree>(100);
+//}
+//
+//TEST(BufferedBTree, Remove1000) {
+//	remove_test<bbtree>(1000);
+//}
+//
+//TEST(BufferedBTree, Remove10000) {
+//	remove_test<bbtree>(10000);
+//}
+//
+//TEST(BufferedBTree, Remove100000) {
+//	remove_test<bbtree>(100000);
+//}
+//
+//TEST(BufferedBTree, Update10) {
+//	update_test<bbtree>(10);
+//}
+//
+//TEST(BufferedBTree, Update100) {
+//	update_test<bbtree>(100);
+//}
+//
+//TEST(BufferedBTree, Update1000) {
+//	update_test<bbtree>(1000);
+//}
+//
+//TEST(BufferedBTree, Update10000) {
+//	update_test<bbtree>(10000);
+//}
+//
+//TEST(BufferedBTree, Update100000) {
+//	update_test<bbtree>(100000);
+//}
+//
+//TEST(BufferedBTree, Search10) {
+//	search_test<bbtree>(10);
+//}
+//
+//TEST(BufferedBTree, Search100) {
+//	search_test<bbtree>(100);
+//}
+//
+//TEST(BufferedBTree, Search1000) {
+//	search_test<bbtree>(1000);
+//}
+//
+//TEST(BufferedBTree, Search10000) {
+//	search_test<bbtree>(10000);
+//}
+//
+//TEST(BufferedBTree, Search100000) {
+//	search_test<bbtree>(100000);
+//}
 
 TEST(BTree, Insertion10) {
 	insert_test<btree>(10);

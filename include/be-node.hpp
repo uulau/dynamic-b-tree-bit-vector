@@ -7,11 +7,6 @@ using namespace dyn;
 namespace be {
 	template <class leaf_type, uint32_t B, uint32_t B_LEAF> class node {
 	public:
-		void init_message_buffer(uint64_t message_count) {
-			message_buffer = vector<message>();
-			message_buffer.reserve(message_count);
-		}
-
 		node(const node& n) {
 
 			subtree_sizes = { n.subtree_sizes };
@@ -147,7 +142,7 @@ namespace be {
 
 		}
 
-		const bool has_leaves() const {
+		bool has_leaves() const {
 
 			return has_leaves_;
 
@@ -180,7 +175,7 @@ namespace be {
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		const uint64_t at(uint64_t i, vector<message>* messages = NULL, int64_t increment = 0) {
+		uint64_t at(uint64_t i, vector<message>* messages = NULL, int64_t increment = 0) {
 
 			int counter = 0;
 			for (const auto& message : message_buffer) {
@@ -192,7 +187,7 @@ namespace be {
 					else if (message.index == i && message.type == message_type::update) {
 						!message.upsert_subtract ? increment += message.value : increment -= message.value;
 					}
-					messages->push_back(message);
+					messages->emplace_back(message);
 				}
 			}
 
@@ -251,7 +246,7 @@ namespace be {
 		/*
 		 * returns sum up to i-th integer included
 		 */
-		const uint64_t psum(uint64_t i) {
+		uint64_t psum(uint64_t i) {
 
 			assert(i < size());
 
@@ -287,7 +282,7 @@ namespace be {
 		/*
 		 * returns smallest i such that I_0 + ... + I_i >= x
 		 */
-		const uint64_t search(uint64_t x) {
+		uint64_t search(uint64_t x) {
 
 			assert(x <= psum());
 
@@ -425,7 +420,7 @@ namespace be {
 			return nr_children == (2 * B + 2);
 		}
 
-		const bool message_buffer_is_full() {
+		bool message_buffer_is_full() {
 			return message_buffer.size() == message_buffer.capacity();
 		}
 
@@ -447,7 +442,7 @@ namespace be {
 			rank_++;
 		}
 
-		node* get_parent() {
+		const node* get_parent() {
 			return parent;
 		}
 
@@ -507,18 +502,18 @@ namespace be {
 					node* n = parent;
 
 					while (n && n->is_full()) {
-						auto right = n->split();
+						auto r = n->split();
 						if (n->is_root()) {
-							vector<node*> vn{ n, right };
+							vector<node*> vn{ n, r };
 							new_root = new node(vn, message_buffer.capacity());
 							assert(not new_root->is_full());
 							n->overwrite_parent(new_root);
-							right->overwrite_parent(new_root);
+							r->overwrite_parent(new_root);
 							break;
 						}
 						else {
 							assert(n->rank() < n->parent->number_of_children());
-							n->parent->new_children(n->rank(), n, right);
+							n->parent->new_children(n->rank(), n, r);
 						}
 						n = n->parent;
 					}
@@ -554,7 +549,7 @@ namespace be {
 				auto rank = p->rank();
 				p = p->parent;
 				uint64_t sum = 0;
-				for (int a = 0; a < rank; a++) {
+				for (uint64_t a = 0; a < rank; a++) {
 					sum += p->subtree_sizes[a];
 				}
 				i += sum;
@@ -613,37 +608,11 @@ namespace be {
 		}
 
 		uint64_t size() {
-			return size_no_messages() + insert_messages - remove_messages;
-		}
-
-		uint64_t messages_sum() {
-			if (has_leaves()) return 0;
-
-			uint64_t sum = 0;
-
-			for (const auto& message : message_buffer) {
-				if (message.type == message_type::insert) {
-					sum += message.value;
-				}
-				else if (message.type == message_type::remove) {
-					sum -= at(message.index);
-				}
-				sum += message.value;
-			}
-
-			return sum;
+			return subtree_sizes[nr_children - 1] + size_total;
 		}
 
 		uint64_t psum() {
 			return messages_sum() + subtree_psums[nr_children - 1];
-		}
-
-		void overwrite_parent(node* P) {
-			parent = P;
-		}
-
-		uint32_t number_of_children() {
-			return nr_children;
 		}
 
 		node* create_message(const message m) {
@@ -667,6 +636,38 @@ namespace be {
 			}
 
 			return new_root;
+		}
+
+	private:
+		void init_message_buffer(uint64_t message_count) {
+			message_buffer = vector<message>();
+			message_buffer.reserve(message_count);
+		}
+
+		uint64_t messages_sum() {
+			if (has_leaves()) return 0;
+
+			uint64_t sum = 0;
+
+			for (const auto& message : message_buffer) {
+				if (message.type == message_type::insert) {
+					sum += message.value;
+				}
+				else if (message.type == message_type::remove) {
+					sum -= at(message.index);
+				}
+				sum += message.value;
+			}
+
+			return sum;
+		}
+
+		void overwrite_parent(node* P) {
+			parent = P;
+		}
+
+		uint32_t number_of_children() {
+			return nr_children;
 		}
 
 		node* add_to_leaf(const message m) {
@@ -720,17 +721,17 @@ namespace be {
 		void add_message(const message m) {
 			switch (m.type) {
 			case message_type::insert: {
-				insert_messages++;
-				message_buffer.push_back(m);
+				size_total++;
+				message_buffer.emplace_back(m);
 				break;
 			}
 			case message_type::remove: {
-				remove_messages++;
-				message_buffer.push_back(m);
+				size_total--;
+				message_buffer.emplace_back(m);
 				break;
 			}
 			case message_type::update: {
-				message_buffer.push_back(m);
+				message_buffer.emplace_back(m);
 				break;
 			}
 			default: throw;
@@ -740,12 +741,12 @@ namespace be {
 		void erase_message(const message m) {
 			switch (m.type) {
 			case message_type::insert: {
-				insert_messages--;
+				size_total--;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
 			case message_type::remove: {
-				remove_messages--;
+				size_total++;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
@@ -756,7 +757,6 @@ namespace be {
 			default: throw;
 			}
 		}
-
 
 		void update_counters(bool single = false) {
 			uint64_t ps = 0;
@@ -787,7 +787,6 @@ namespace be {
 			}
 		}
 
-	private:
 		/*
 		 * new element between elements i and i+1
 		 */
@@ -1064,8 +1063,7 @@ namespace be {
 			nr_children = nr_children / 2;
 
 			vector<message> mb(std::move(message_buffer));
-			insert_messages = 0;
-			remove_messages = 0;
+			size_total -= mb.size();
 
 			for (auto& message : mb) {
 				if (message.index < size()) {
@@ -1088,9 +1086,9 @@ namespace be {
 		}
 
 		/*
-		 * in the following 2 vectors, the first nr_subtrees+1 elements refer to the
-		 * nr_subtrees subtrees
-		 */
+		* in the following 2 vectors, the first nr_subtrees+1 elements refer to the
+		* nr_subtrees subtrees
+		*/
 		vector<uint64_t> subtree_sizes;
 		vector<uint64_t> subtree_psums;
 
@@ -1106,10 +1104,7 @@ namespace be {
 
 		bool has_leaves_ = false;	//if true, leaves array is nonempty and children is empty
 
-		int64_t insert_messages = 0;
-		int64_t remove_messages = 0;
-
-	private:
+		int64_t size_total = 0;
 
 		void remove_leaf_index(uint64_t i, uint64_t j) {
 			assert(this->leaves.size() == nr_children);
@@ -1204,9 +1199,9 @@ namespace be {
 					//update parent (i.e. this)
 					--(this->nr_children);
 
-					for (size_t i = j; i < this->nr_children; ++i) {
-						this->subtree_sizes[i] = this->subtree_sizes[i + 1];
-						this->subtree_psums[i] = this->subtree_psums[i + 1];
+					for (size_t t = j; t < this->nr_children; ++t) {
+						this->subtree_sizes[t] = this->subtree_sizes[t + 1];
+						this->subtree_psums[t] = this->subtree_psums[t + 1];
 					}
 
 					if (y_is_prev) {

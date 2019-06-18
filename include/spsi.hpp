@@ -59,7 +59,7 @@ namespace b {
 			 * create empty spsi. Input parameters are not used (legacy option). This structure
 			 * does not need a max size, and width is automatically detected.
 			 */
-			spsi(uint64_t max_len = 0, uint64_t width = 0, uint64_t message_count = 0) {
+			spsi(uint64_t message_count = 0) {
 
 				root = new node<leaf_type, B, B_LEAF>();
 

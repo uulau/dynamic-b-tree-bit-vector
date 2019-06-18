@@ -11,9 +11,9 @@ typedef bb::spsi<packed_vector, 256, 16> bbtree;
 typedef be::spsi<packed_vector, 256, 16> betree;
 
 template<class T> T* generate_tree(uint64_t amount) {
-	auto tree = new T(0, 0, 256);
+	auto tree = new T(256);
 
-	for (int i = 0; i < amount; i++) {
+	for (uint64_t i = 0; i < amount; i++) {
 		tree->push_back(i);
 	}
 
@@ -29,7 +29,7 @@ template <class T> void size_test(uint64_t size) {
 template <class T> void insert_test(uint64_t size) {
 	auto tree = generate_tree<T>(0);
 
-	for (auto i = 0; i <= size; i++) {
+	for (uint64_t i = 0; i <= size; i++) {
 		tree->insert(i, size - i);
 		auto val = tree->at(i);
 		EXPECT_EQ(val, size - i);
@@ -43,7 +43,7 @@ template <class T> void insert_test(uint64_t size) {
 
 template <class T> void update_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
-	for (auto i = 0; i < size; i++) {
+	for (uint64_t i = 0; i < size; i++) {
 		tree->set(i, size - i);
 		auto val = tree->at(i);
 		EXPECT_EQ(val, size - i);
@@ -57,7 +57,7 @@ template <class T> void update_test(uint64_t size) {
 template <class T> void sum_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	uint64_t sum = 0;
-	for (auto i = 0; i < size; i++) {
+	for (uint64_t i = 0; i < size; i++) {
 		sum += i;
 		auto val = tree->psum(i);
 		EXPECT_EQ(sum, val);
@@ -71,9 +71,9 @@ template <class T> void sum_test(uint64_t size) {
 template <class T> void search_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	uint64_t sum = 0;
-	for (auto i = 0; i < size; i++) {
+	for (uint64_t i = 0; i < size; i++) {
 		sum += tree->at(i);
-		auto val = tree->search(sum);
+		uint64_t val = tree->search(sum);
 		EXPECT_EQ(val, i);
 		if (val != i) {
 			break;
@@ -84,7 +84,7 @@ template <class T> void search_test(uint64_t size) {
 
 template <class T> void remove_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
-	for (auto i = 0; i < size - 1; i++) {
+	for (uint64_t i = 0; i < size - 1; i++) {
 		tree->remove(0);
 		auto val = tree->at(0);
 		EXPECT_TRUE(i + 1 == val);

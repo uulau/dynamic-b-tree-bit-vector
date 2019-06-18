@@ -5,15 +5,14 @@
 
 using namespace std;
 
-void generate_test(uint64_t operations, double insert_ratio, double query_ratio) {
-	assert(insert_ratio + query_ratio == 1);
+void generate_test(uint64_t operations, double insert_ratio) {
 	assert(operations > 0);
 
 	// Seed random number generator with time
 	srand(time(0));
 	auto insert_counter = 0;
 	ofstream file("..\\test.txt");
-	for (auto i = 0; i < operations; i++) {
+	for (uint64_t i = 0; i < operations; i++) {
 		auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
 		if (file.is_open()) {
 			if (insert) {
@@ -33,5 +32,5 @@ void generate_test(uint64_t operations, double insert_ratio, double query_ratio)
 
 int main()
 {
-	generate_test(1000000, 0.1, 0.9);
+	generate_test(1000000, 0.1);
 }

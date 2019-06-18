@@ -13,15 +13,15 @@ namespace dyn {
 	};
 
 	const message insert_message(uint64_t index, uint64_t value) {
-		return message{ message_type::insert , index, value };
+		return message{ message_type::insert, index, value, false };
 	}
 
 	const message remove_message(uint64_t index) {
-		return message{ message_type::remove , index };
+		return message{ message_type::remove, index, 0, false };
 	}
 
 	const message query_message(uint64_t index) {
-		return message{ message_type::query , index };
+		return message{ message_type::query, index, 0, false };
 
 	}
 

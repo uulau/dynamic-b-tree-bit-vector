@@ -149,11 +149,11 @@ namespace dyn {
 		}
 
 #if defined(_MSC_VER) and !defined (__clang__)
-		int __builtin_popcountll(uint64_t num) {
+		uint64_t __builtin_popcountll(uint64_t num) {
 			return __popcnt64(num);
 		}
 
-		int __builtin_clzll(uint64_t num) {
+		uint64_t __builtin_clzll(uint64_t num) {
 			return __lzcnt64(num);
 		}
 #endif
@@ -434,9 +434,9 @@ namespace dyn {
 
 					for (ulint j = 0; j < size_; ++j) {
 						if (j != i) {
-							auto x = this->at(j);
+							auto t = this->at(j);
 
-							uint8_t bs = bitsize(x);
+							uint8_t bs = bitsize(t);
 
 							if (bs > max_b) max_b = bs;
 						}
@@ -490,7 +490,7 @@ namespace dyn {
 				auto temp = vector<uint64_t>(words.size() + extra_, 0);
 
 				uint64_t j = 0;
-				for (auto x : words) temp[j++] = x;
+				for (auto t : words) temp[j++] = t;
 
 				words = vector<uint64_t>(temp);
 
@@ -558,10 +558,8 @@ namespace dyn {
 			assert(tot_words <= words.size());
 
 			uint64_t nr_left_words = tot_words / 2;
-			uint64_t nr_right_words = tot_words - nr_left_words;
 
 			assert(nr_left_words > 0);
-			assert(nr_right_words > 0);
 
 			uint64_t nr_left_ints = nr_left_words * int_per_word_;
 
