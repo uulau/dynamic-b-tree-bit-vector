@@ -612,7 +612,7 @@ namespace be {
 		}
 
 		uint64_t psum() {
-			return messages_sum() + subtree_psums[nr_children - 1];
+			return subtree_psums[nr_children - 1] + sum_total;
 		}
 
 		node* create_message(const message m) {
@@ -722,15 +722,18 @@ namespace be {
 			switch (m.type) {
 			case message_type::insert: {
 				size_total++;
+				sum_total += m.value;
 				message_buffer.emplace_back(m);
 				break;
 			}
 			case message_type::remove: {
 				size_total--;
+				sum_total -= m.value;
 				message_buffer.emplace_back(m);
 				break;
 			}
 			case message_type::update: {
+				m.upsert_subtract ? sum_total -= m.value : sum_total += m.value;
 				message_buffer.emplace_back(m);
 				break;
 			}
@@ -742,15 +745,18 @@ namespace be {
 			switch (m.type) {
 			case message_type::insert: {
 				size_total--;
+				sum_total -= m.value;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
 			case message_type::remove: {
 				size_total++;
+				sum_total += m.value;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
 			case message_type::update: {
+				m.upsert_subtract ? sum_total += m.value : sum_total -= m.value;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
@@ -1065,7 +1071,8 @@ namespace be {
 			auto count = message_buffer.size();
 			vector<message> mb(move(message_buffer));
 			message_buffer.reserve(count);
-			size_total -= mb.size();
+			size_total = 0;
+			sum_total = 0;
 
 			for (auto& message : mb) {
 				if (message.index < size()) {
@@ -1107,6 +1114,7 @@ namespace be {
 		bool has_leaves_ = false;	//if true, leaves array is nonempty and children is empty
 
 		int64_t size_total = 0;
+		int64_t sum_total = 0;
 
 		void remove_leaf_index(uint64_t i, uint64_t j) {
 			assert(this->leaves.size() == nr_children);
