@@ -14,7 +14,6 @@ namespace dyn {
 
 	const message insert_message(uint64_t index, uint64_t value) {
 		return message{ message_type::insert , index, value };
-
 	}
 
 	const message remove_message(uint64_t index) {

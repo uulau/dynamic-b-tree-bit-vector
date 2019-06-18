@@ -14,7 +14,7 @@ typedef be::spsi<packed_vector, 256, 16> betree;
 static int UNIT_MAX = 8 << 12;
 
 static void BTreeInsertion(benchmark::State& state) {
-	auto tree = btree(0, 0, 0);
+	auto tree{ btree(0, 0, 0) };
 
 	for (auto _ : state) {
 		tree.push_back(0);
@@ -23,7 +23,7 @@ static void BTreeInsertion(benchmark::State& state) {
 BENCHMARK(BTreeInsertion);
 
 static void BBTreeInsertion(benchmark::State& state) {
-	auto tree = bbtree(0, 0, state.range(0));
+	auto tree{ bbtree(0, 0, state.range(0)) };
 
 	for (auto _ : state) {
 		tree.push_back(0);
@@ -54,15 +54,15 @@ public:
 };
 
 BENCHMARK_F(OperationFixture, BTreeOperations)(benchmark::State& state) {
-	auto tree = btree(0, 0, 0);
 	for (auto _ : state) {
+		auto tree{ btree(0, 0, 0) };
 		execute_test(messages, tree);
 	}
 }
 
 BENCHMARK_DEFINE_F(OperationFixture, BBTreeOperations)(benchmark::State& state) {
-	auto tree = bbtree(0, 0, state.range(0));
 	for (auto _ : state) {
+		auto tree{ bbtree(0, 0, state.range(0)) };
 		execute_test(messages, tree);
 	}
 }
@@ -70,8 +70,8 @@ BENCHMARK_DEFINE_F(OperationFixture, BBTreeOperations)(benchmark::State& state) 
 BENCHMARK_REGISTER_F(OperationFixture, BBTreeOperations)->Range(1, UNIT_MAX);
 
 BENCHMARK_DEFINE_F(OperationFixture, BETreeOperations)(benchmark::State& state) {
-	auto tree = betree(0, 0, state.range(0));
 	for (auto _ : state) {
+		auto tree{ betree(0, 0, state.range(0)) };
 		execute_test(messages, tree);
 	}
 }

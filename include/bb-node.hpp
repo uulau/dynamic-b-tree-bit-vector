@@ -41,8 +41,6 @@ namespace bb {
 
 			}
 
-			node* parent = NULL; 	//NULL for root
-
 			rank_ = n.rank_; 		//rank of this node among its siblings
 
 			nr_children = n.nr_children; 	//number of subtrees

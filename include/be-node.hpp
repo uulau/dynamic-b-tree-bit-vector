@@ -41,8 +41,6 @@ namespace be {
 
 			}
 
-			node* parent = NULL; 	//NULL for root
-
 			rank_ = n.rank_; 		//rank of this node among its siblings
 
 			nr_children = n.nr_children; 	//number of subtrees
@@ -368,8 +366,6 @@ namespace be {
 		 * increment or decrement i-th integer by delta
 		 */
 		void increment(uint64_t i, uint64_t delta, bool subtract = false) {
-
-			auto d = size();
 			assert(i < size());
 
 			uint32_t j = 0;
@@ -652,16 +648,9 @@ namespace be {
 
 		node* create_message(const message m) {
 			node* new_root = NULL;
+
 			if (has_leaves()) {
-				if (m.type == message_type::insert) {
-					new_root = insert(m.index, m.value);
-				}
-				else if (m.type == message_type::remove) {
-					new_root = remove(m.index);
-				}
-				else if (m.type == message_type::update) {
-					increment(m.index, m.value, m.upsert_subtract);
-				}
+				new_root = add_to_leaf(m);
 			}
 			else {
 				add_message(m);
@@ -670,46 +659,56 @@ namespace be {
 				}
 			}
 
+			if (new_root) {
+				new_root->update_counters();
+			}
+			else {
+				update_counters(true);
+			}
+
+			return new_root;
+		}
+
+		node* add_to_leaf(const message m) {
+			node* new_root = NULL;
+			if (m.type == message_type::insert) {
+				new_root = insert(m.index, m.value);
+			}
+			else if (m.type == message_type::remove) {
+				new_root = remove(m.index);
+			}
+			else if (m.type == message_type::update) {
+				increment(m.index, m.value, m.upsert_subtract);
+			}
 			return new_root;
 		}
 
 		node* flush_messages() {
 			node* new_root = NULL;
 			while (!message_buffer.empty()) {
-				auto index = message_buffer[0].index;
-				auto value = message_buffer[0].value;
-				auto type = message_buffer[0].type;
-				auto subtract = message_buffer[0].upsert_subtract;
+				auto message = message_buffer[0];
 
 				auto j = 0;
 
-				while (subtree_sizes[j] < index) {
+				while (subtree_sizes[j] < message.index) {
 					j++;
 				}
 
-				if (subtree_sizes[j] == index && type == message_type::update) {
+				if (subtree_sizes[j] == message.index && message.type == message_type::update) {
 					j++;
 				}
 
 				auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
-				auto i = index - previous_size;
+				auto i = message.index - previous_size;
 
 				erase_message(message_buffer[0]);
 
 				auto messages = message_buffer.size();
 
-				if (type == message_type::insert) {
-					new_root = children[j]->create_message(insert_message(i, value));
-				}
-				else if (type == message_type::remove) {
-					new_root = children[j]->create_message(remove_message(i));
-				}
-				else if (type == message_type::update) {
-					new_root = children[j]->create_message(update_message(i, value, subtract));
-				}
+				message.index = i;
 
-				new_root ? new_root->update_counters() : update_counters();
+				new_root = children[j]->create_message(message);
 
 				if (messages != message_buffer.size()) {
 					break;
@@ -759,7 +758,7 @@ namespace be {
 		}
 
 
-		void update_counters() {
+		void update_counters(bool single = false) {
 			uint64_t ps = 0;
 			uint64_t si = 0;
 
@@ -777,7 +776,9 @@ namespace be {
 					assert(children[k] != NULL);
 					ps += children[k]->psum();
 					si += children[k]->size();
-					children[k]->update_counters();
+					if (!single) {
+						children[k]->update_counters();
+					}
 				}
 
 				subtree_psums[k] = ps;
