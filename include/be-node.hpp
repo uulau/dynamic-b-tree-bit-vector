@@ -1062,7 +1062,9 @@ namespace be {
 
 			nr_children = nr_children / 2;
 
-			vector<message> mb(std::move(message_buffer));
+			auto count = message_buffer.size();
+			vector<message> mb(move(message_buffer));
+			message_buffer.reserve(count);
 			size_total -= mb.size();
 
 			for (auto& message : mb) {
