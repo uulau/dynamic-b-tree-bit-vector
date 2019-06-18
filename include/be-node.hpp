@@ -182,13 +182,17 @@ namespace be {
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		const uint64_t at(uint64_t i, vector<message>* messages = NULL) {
+		const uint64_t at(uint64_t i, vector<message>* messages = NULL, int64_t increment = 0) {
 
 			int counter = 0;
 			for (const auto& message : message_buffer) {
 				if (message.index <= i) {
 					if (message.index == i && message.type == message_type::insert) {
+						delete messages;
 						return message.value;
+					}
+					else if (message.index == i && message.type == message_type::update) {
+						!message.upsert_subtract ? increment += message.value : increment -= message.value;
 					}
 					messages->push_back(message);
 				}
@@ -206,7 +210,7 @@ namespace be {
 			}
 
 			if (counter != 0) {
-				return at(i + counter, NULL);
+				return at(i + counter, NULL, increment);
 			}
 
 			assert(i < size());
@@ -235,13 +239,14 @@ namespace be {
 				assert(leaves[j] != NULL);
 				assert(i - previous_size < leaves[j]->size());
 
-				return leaves[j]->at(i - previous_size);
+				delete messages;
+				return leaves[j]->at(i - previous_size) + increment;
 
 			}
 
 			//else: recurse on children
 
-			return children[j]->at(i - previous_size, messages);
+			return children[j]->at(i - previous_size, messages, increment);
 
 		}
 
@@ -364,6 +369,7 @@ namespace be {
 		 */
 		void increment(uint64_t i, uint64_t delta, bool subtract = false) {
 
+			auto d = size();
 			assert(i < size());
 
 			uint32_t j = 0;
@@ -651,11 +657,10 @@ namespace be {
 					new_root = insert(m.index, m.value);
 				}
 				else if (m.type == message_type::remove) {
-					// FIXME
 					new_root = remove(m.index);
 				}
 				else if (m.type == message_type::update) {
-					// FIXME
+					increment(m.index, m.value, m.upsert_subtract);
 				}
 			}
 			else {
@@ -674,10 +679,15 @@ namespace be {
 				auto index = message_buffer[0].index;
 				auto value = message_buffer[0].value;
 				auto type = message_buffer[0].type;
+				auto subtract = message_buffer[0].upsert_subtract;
 
 				auto j = 0;
 
 				while (subtree_sizes[j] < index) {
+					j++;
+				}
+
+				if (subtree_sizes[j] == index && type == message_type::update) {
 					j++;
 				}
 
@@ -694,6 +704,9 @@ namespace be {
 				}
 				else if (type == message_type::remove) {
 					new_root = children[j]->create_message(remove_message(i));
+				}
+				else if (type == message_type::update) {
+					new_root = children[j]->create_message(update_message(i, value, subtract));
 				}
 
 				new_root ? new_root->update_counters() : update_counters();
@@ -719,6 +732,7 @@ namespace be {
 			}
 			case message_type::update: {
 				message_buffer.push_back(m);
+				break;
 			}
 			default: throw;
 			}
@@ -738,6 +752,7 @@ namespace be {
 			}
 			case message_type::update: {
 				message_buffer.erase(message_buffer.begin());
+				break;
 			}
 			default: throw;
 			}
@@ -1047,17 +1062,17 @@ namespace be {
 
 			nr_children = nr_children / 2;
 
-			vector<message> mb(message_buffer);
-			message_buffer.clear();
+			vector<message> mb(std::move(message_buffer));
 			insert_messages = 0;
 			remove_messages = 0;
 
-			for (const auto& message : mb) {
+			for (auto& message : mb) {
 				if (message.index < size()) {
 					add_message(message);
 				}
 				else {
-					right->add_message(insert_message(message.index - size(), message.value));
+					message.index = message.index - size();
+					right->add_message(message);
 				}
 			}
 

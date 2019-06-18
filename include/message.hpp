@@ -9,7 +9,7 @@ namespace dyn {
 		message_type type;
 		uint64_t index;
 		uint64_t value;
-		bool upsert_increment;
+		bool upsert_subtract;
 	};
 
 	const message insert_message(uint64_t index, uint64_t value) {
@@ -26,7 +26,7 @@ namespace dyn {
 
 	}
 
-	const message update_message(uint64_t index, uint64_t value, uint64_t, bool increment) {
+	const message update_message(uint64_t index, uint64_t value, bool increment) {
 		return message{ message_type::update, index, value, increment };
 	}
 }

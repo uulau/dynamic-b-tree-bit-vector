@@ -195,14 +195,6 @@ namespace be {
 				}
 			}
 
-			void old_remove(uint64_t i) {
-				node<leaf_type, B, B_LEAF>* new_root = root->remove(i);
-				if (new_root != NULL) {
-					delete root;
-					root = new_root;
-				}
-			}
-
 			/*
 			 * return number of integers stored in the structure
 			 */
@@ -243,7 +235,7 @@ namespace be {
 
 				auto returnable = new vector<message>();
 
-				return root->at(i, returnable);
+				return root->at(i, returnable, 0);
 			}
 
 			/*
@@ -260,7 +252,7 @@ namespace be {
 
 				assert(not subtract or delta <= at(i));
 
-				root->increment(i, delta, subtract);
+				root->create_message(update_message(i, delta, subtract));
 			}
 
 			/*
