@@ -681,7 +681,9 @@ namespace be {
 			while (!message_buffer.empty()) {
 				auto message = message_buffer[0];
 
-				auto j = subtree_size_bound<false>(message.index);
+				uint32_t j = message.type == message_type::insert
+					? subtree_size_bound<false>(message.index)
+					: subtree_size_bound<true>(message.index);
 
 				if (subtree_sizes[j] == message.index && message.type == message_type::update) {
 					j++;
@@ -1063,13 +1065,25 @@ namespace be {
 			sum_total = 0;
 
 			for (auto& message : mb) {
-				if (message.index < size()) {
-					add_message(message);
+				if (message.type == message_type::insert) {
+					if (message.index <= size()) {
+						add_message(message);
+					}
+					else {
+						message.index = message.index - size();
+						right->add_message(message);
+					}
 				}
 				else {
-					message.index = message.index - size();
-					right->add_message(message);
+					if (message.index < size()) {
+						add_message(message);
+					}
+					else {
+						message.index = message.index - size();
+						right->add_message(message);
+					}
 				}
+
 			}
 
 			return right;

@@ -21,6 +21,10 @@ TEST(BEpsilonTree, Insertion100000) {
 	insert_test<betree>(100000);
 }
 
+TEST(BEpsilonTree, Insertion1000000) {
+	insert_test<betree>(1000000);
+}
+
 TEST(BEpsilonTree, Sum10) {
 	sum_test<betree>(10);
 }
@@ -39,6 +43,10 @@ TEST(BEpsilonTree, Sum10000) {
 
 TEST(BEpsilonTree, Sum100000) {
 	sum_test<betree>(100000);
+}
+
+TEST(BEpsilonTree, Sum1000000) {
+	sum_test<betree>(1000000);
 }
 
 TEST(BEpsilonTree, Size10) {
@@ -60,6 +68,10 @@ TEST(BEpsilonTree, Size10000) {
 TEST(BEpsilonTree, Size100000) {
 	size_test<betree>(100000);
 }
+
+TEST(BEpsilonTree, Size1000000) {
+	size_test<betree>(1000000);
+}
 TEST(BEpsilonTree, Remove10) {
 	remove_test<betree>(10);
 }
@@ -78,6 +90,10 @@ TEST(BEpsilonTree, Remove10000) {
 
 TEST(BEpsilonTree, Remove100000) {
 	remove_test<betree>(100000);
+}
+
+TEST(BEpsilonTree, Remove1000000) {
+	remove_test<betree>(1000000);
 }
 
 TEST(BEpsilonTree, Update10) {
@@ -100,6 +116,10 @@ TEST(BEpsilonTree, Update100000) {
 	update_test<betree>(100000);
 }
 
+TEST(BEpsilonTree, Update1000000) {
+	update_test<betree>(1000000);
+}
+
 TEST(BEpsilonTree, Search10) {
 	search_test<betree>(10);
 }
@@ -118,6 +138,10 @@ TEST(BEpsilonTree, Search10000) {
 
 TEST(BEpsilonTree, Search100000) {
 	search_test<betree>(100000);
+}
+
+TEST(BEpsilonTree, Search1000000) {
+	search_test<betree>(1000000);
 }
 
 //TEST(BufferedBTree, Insertion10) {
@@ -260,6 +284,10 @@ TEST(BTree, Insertion100000) {
 	insert_test<btree>(100000);
 }
 
+TEST(BTree, Insertion1000000) {
+	insert_test<btree>(1000000);
+}
+
 TEST(BTree, Sum10) {
 	sum_test<btree>(10);
 }
@@ -278,6 +306,10 @@ TEST(BTree, Sum10000) {
 
 TEST(BTree, Sum100000) {
 	sum_test<btree>(100000);
+}
+
+TEST(BTree, Sum1000000) {
+	sum_test<btree>(1000000);
 }
 
 TEST(BTree, Size10) {
@@ -300,6 +332,10 @@ TEST(BTree, Size100000) {
 	size_test<btree>(100000);
 }
 
+TEST(BTree, Size1000000) {
+	size_test<btree>(1000000);
+}
+
 TEST(BTree, Remove10) {
 	remove_test<btree>(10);
 }
@@ -318,6 +354,10 @@ TEST(BTree, Remove10000) {
 
 TEST(BTree, Remove100000) {
 	remove_test<btree>(100000);
+}
+
+TEST(BTree, Remove1000000) {
+	remove_test<btree>(1000000);
 }
 
 TEST(BTree, Update10) {
@@ -340,6 +380,10 @@ TEST(BTree, Update100000) {
 	update_test<btree>(100000);
 }
 
+TEST(BTree, Update1000000) {
+	update_test<btree>(1000000);
+}
+
 TEST(BTree, Search10) {
 	search_test<btree>(10);
 }
@@ -358,4 +402,8 @@ TEST(BTree, Search10000) {
 
 TEST(BTree, Search100000) {
 	search_test<btree>(100000);
+}
+
+TEST(BTree, Search1000000) {
+	search_test<btree>(1000000);
 }
