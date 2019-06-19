@@ -175,34 +175,32 @@ namespace be {
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		uint64_t at(uint64_t i, vector<message>* messages = NULL, int64_t increment = 0) {
+		uint64_t at(uint64_t const i, int64_t message_count = 0, int64_t increment = 0) {
 
 			int counter = 0;
 			for (const auto& message : message_buffer) {
-				if (message.index <= i) {
-					if (message.index == i && message.type == message_type::insert) {
+
+				if (message.index == i) {
+					if (message.type == message_type::insert) {
 						return message.value;
 					}
-					else if (message.index == i && message.type == message_type::update) {
+					else if (message.type == message_type::update) {
 						!message.upsert_subtract ? increment += message.value : increment -= message.value;
 					}
-					messages->emplace_back(message);
 				}
-			}
 
-			if (messages && has_leaves()) {
-				for (const auto& message : *messages) {
+				if (message.index <= i) {
 					if (message.type == message_type::insert) {
-						counter--;
+						message_count--;
 					}
 					else if (message.type == message_type::remove) {
-						counter++;
+						message_count++;
 					}
 				}
 			}
 
-			if (counter != 0) {
-				return at(i + counter, NULL, increment);
+			if (has_leaves() && message_count != 0) {
+				return at(i + message_count, 0, increment);
 			}
 
 			assert(i < size());
@@ -230,7 +228,7 @@ namespace be {
 
 			//else: recurse on children
 
-			return children[j]->at(i - previous_size, messages, increment);
+			return children[j]->at(i - previous_size, message_count, increment);
 
 		}
 
@@ -241,14 +239,7 @@ namespace be {
 
 			assert(i < size());
 
-			uint32_t j = 0;
-
-			while (subtree_sizes[j] <= i) {
-
-				j++;
-				assert(j < subtree_sizes.size());
-
-			}
+			uint32_t j = subtree_size_bound<true>(i);
 
 			//size/psum stored in previous counter
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
@@ -354,14 +345,7 @@ namespace be {
 		void increment(uint64_t i, uint64_t delta, bool subtract = false) {
 			assert(i < size());
 
-			uint32_t j = 0;
-
-			while (subtree_sizes[j] <= i) {
-
-				j++;
-				assert(j < subtree_sizes.size());
-
-			}
+			uint32_t j = subtree_size_bound<true>(i);
 
 			//size stored in previous counter
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
@@ -561,13 +545,7 @@ namespace be {
 			assert(this->can_lose());
 			assert(i < this->size_no_messages());
 
-			uint32_t j = 0;
-			while (this->subtree_sizes[j] <= i) {
-
-				++j;
-				assert(j < this->subtree_sizes.size());
-
-			}
+			uint32_t j = subtree_size_bound<true>(i);
 
 			//size stored in previous counter
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
