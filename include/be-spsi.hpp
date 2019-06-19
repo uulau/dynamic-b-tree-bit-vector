@@ -233,9 +233,9 @@ namespace be {
 				assert(size() > 0);
 				assert(i < size());
 
-				auto returnable = new vector<message>();
+				auto returnable = vector<message>();
 
-				return root->at(i, returnable, 0);
+				return root->at(i, &returnable, 0);
 			}
 
 			/*

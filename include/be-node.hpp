@@ -181,7 +181,6 @@ namespace be {
 			for (const auto& message : message_buffer) {
 				if (message.index <= i) {
 					if (message.index == i && message.type == message_type::insert) {
-						delete messages;
 						return message.value;
 					}
 					else if (message.index == i && message.type == message_type::update) {
@@ -208,14 +207,7 @@ namespace be {
 
 			assert(i < size());
 
-			uint32_t j = 0;
-
-			while (subtree_sizes[j] <= i) {
-
-				j++;
-				assert(j < subtree_sizes.size());
-
-			}
+			uint32_t j = subtree_size_bound<true>(i);
 
 			//size stored in previous counter
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
@@ -232,7 +224,6 @@ namespace be {
 				assert(leaves[j] != NULL);
 				assert(i - previous_size < leaves[j]->size());
 
-				delete messages;
 				return leaves[j]->at(i - previous_size) + increment;
 
 			}
@@ -632,13 +623,36 @@ namespace be {
 				new_root->update_counters();
 			}
 			else {
-				update_counters(true);
+				update_counters<true>();
 			}
 
 			return new_root;
 		}
 
 	private:
+		template <bool upper> uint32_t subtree_size_bound(uint32_t i) {
+			uint32_t j = 0;
+
+			if constexpr (upper) {
+				while (subtree_sizes[j] <= i) {
+
+					j++;
+					assert(j < subtree_sizes.size());
+
+				}
+			}
+			else {
+				while (subtree_sizes[j] < i) {
+
+					j++;
+					assert(j < subtree_sizes.size());
+
+				}
+			}
+
+			return j;
+		}
+
 		void init_message_buffer(uint64_t message_count) {
 			message_buffer = vector<message>();
 			message_buffer.reserve(message_count);
@@ -689,11 +703,7 @@ namespace be {
 			while (!message_buffer.empty()) {
 				auto message = message_buffer[0];
 
-				auto j = 0;
-
-				while (subtree_sizes[j] < message.index) {
-					j++;
-				}
+				auto j = subtree_size_bound<false>(message.index);
 
 				if (subtree_sizes[j] == message.index && message.type == message_type::update) {
 					j++;
@@ -764,7 +774,7 @@ namespace be {
 			}
 		}
 
-		void update_counters(bool single = false) {
+		template <bool single = false> void update_counters() {
 			uint64_t ps = 0;
 			uint64_t si = 0;
 
@@ -782,7 +792,7 @@ namespace be {
 					assert(children[k] != NULL);
 					ps += children[k]->psum();
 					si += children[k]->size();
-					if (!single) {
+					if constexpr (!single) {
 						children[k]->update_counters();
 					}
 				}
