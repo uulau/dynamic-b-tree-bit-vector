@@ -4,15 +4,15 @@
 using namespace std;
 using namespace dyn;
 
-namespace bb {
-	template <class leaf_type, uint32_t B, uint32_t B_LEAF> class node {
+namespace dyn {
+	template <class leaf_type> class b_node {
 	public:
-		vector<message>* message_buffer;
-
 		/*
 		 * copy constructor
 		 */
-		node(const node& n) {
+		explicit b_node(const b_node& n) {
+			B = n.B;
+			B_LEAF = n.B_LEAF;
 
 			subtree_sizes = { n.subtree_sizes };
 			subtree_psums = { n.subtree_psums };
@@ -30,11 +30,11 @@ namespace bb {
 			}
 			else {
 
-				children = vector<node*>(n.nr_children, NULL);
+				children = vector<b_node*>(n.nr_children, NULL);
 
 				for (uint64_t i = 0; i < n.nr_children; ++i) {
 
-					children[i] = new node(*n.children[i]);
+					children[i] = new b_node(*n.children[i]);
 					children[i]->overwrite_parent(this);
 
 				}
@@ -47,13 +47,15 @@ namespace bb {
 
 			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty and children is empty
 
-			message_buffer = n.message_buffer;
 		}
 
 		/*
 		 * create new root node. This node has only 1 (empty) child, which is a leaf.
 		 */
-		node(vector<message>* message_buffer) {
+		explicit b_node(uint32_t B, uint32_t B_LEAF, uint32_t message_size) {
+			this->B = B;
+			this->B_LEAF = B_LEAF;
+
 			subtree_sizes = vector<uint64_t>(2 * B + 2);
 			subtree_psums = vector<uint64_t>(2 * B + 2);
 
@@ -62,17 +64,17 @@ namespace bb {
 
 			leaves = vector<leaf_type*>(1);
 			leaves[0] = new leaf_type();
-			this->message_buffer = message_buffer;
+
 		}
 
 		/*
 		 * create new node given some children (other internal nodes),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<message>* message_buffer, vector<node*>& c, node* P = NULL, uint32_t rank = 0) {
-
-			this->message_buffer = message_buffer;
-
+		explicit b_node(uint32_t B, uint32_t B_LEAF, vector<b_node*>& c, b_node* P = NULL, uint32_t rank = 0) {
+			this->B = B;
+			this->B_LEAF = B_LEAF;
+			
 			this->rank_ = rank;
 			this->parent = P;
 
@@ -97,7 +99,7 @@ namespace bb {
 			nr_children = c.size();
 			has_leaves_ = false;
 
-			children = vector<node*>(c);
+			children = vector<b_node*>(c);
 
 			uint32_t r = 0;
 			for (auto cc : children) {
@@ -113,9 +115,9 @@ namespace bb {
 		 * create new node given some children (leaves),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<message>* message_buffer, vector<leaf_type*>& c, node* P = NULL, uint32_t rank = 0) {
-
-			this->message_buffer = message_buffer;
+		explicit b_node(uint32_t B, uint32_t B_LEAF, vector<leaf_type*>& c, b_node* P = NULL, uint32_t rank = 0) {
+			this->B = B;
+			this->B_LEAF = B_LEAF;
 
 			this->rank_ = rank;
 			this->parent = P;
@@ -149,13 +151,13 @@ namespace bb {
 		 * return bit size of all structures rooted in this node
 		 */
 		uint64_t bit_size() const {
-			uint64_t bs = 8 * sizeof(node);
+			uint64_t bs = 8 * sizeof(b_node);
 
 			bs += subtree_sizes.capacity() * sizeof(uint64_t) * 8;
 
 			bs += subtree_psums.capacity() * sizeof(uint64_t) * 8;
 
-			bs += children.capacity() * sizeof(node*) * 8;
+			bs += children.capacity() * sizeof(b_node*) * 8;
 
 			bs += leaves.capacity() * sizeof(leaf_type*) * 8;
 
@@ -207,24 +209,7 @@ namespace bb {
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		uint64_t at(uint64_t i, const vector<message>* mbuffer = NULL) {
-
-			if (mbuffer) {
-				for (auto x = mbuffer->rbegin(); x != mbuffer->rend(); x++) {
-					auto message = *x;
-					if (message.type == message_type::insert && message.index == i) {
-						return message.value;
-					}
-					else if (message.index <= i && message.type == message_type::insert) {
-						i--;
-					}
-					else if (message.index <= i && message.type == message_type::remove) {
-						i++;
-					}
-				}
-			}
-
-			mbuffer = NULL;
+		uint64_t at(uint64_t i) {
 
 			assert(i < size());
 
@@ -567,7 +552,7 @@ namespace bb {
 			rank_++;
 		}
 
-		node* get_parent() {
+		b_node* get_parent() {
 			return parent;
 		}
 
@@ -579,12 +564,12 @@ namespace bb {
 		 * is full and is splitted
 		 *
 		 */
-		node* insert(uint64_t i, uint64_t x) {
+		b_node* insert(uint64_t i, uint64_t x) {
 			assert(i <= size());
 			assert(is_root() || not parent->is_full());
 
-			node* new_root = NULL;
-			node* right = NULL;
+			b_node* new_root = NULL;
+			b_node* right = NULL;
 
 			if (is_full()) {
 
@@ -609,9 +594,9 @@ namespace bb {
 				//if this is the root, create new root
 				if (is_root()) {
 
-					vector<node*> vn{ this, right };
+					vector<b_node*> vn{ this, right };
 
-					new_root = new node(message_buffer, vn);
+					new_root = new b_node(B, B_LEAF, vn);
 					assert(not new_root->is_full());
 
 					this->overwrite_parent(new_root);
@@ -646,11 +631,11 @@ namespace bb {
 		 * has only one non-leaf child.
 		 *
 		 */
-		node* remove(uint64_t i) {
+		b_node* remove(uint64_t i) {
 			assert(i < size());
 			assert(is_root() || parent->can_lose());
 
-			node* x = this;
+			b_node* x = this;
 
 			if (not x->can_lose()) {
 				ensure_can_lose(i);
@@ -683,7 +668,7 @@ namespace bb {
 				children[j]->remove(i);
 			}
 
-			node* new_root = NULL;
+			b_node* new_root = NULL;
 
 			//After removal, check if root needs to be updated
 			if (is_root()) {
@@ -708,16 +693,14 @@ namespace bb {
 			assert(nr_children > 0);
 			assert(nr_children - 1 < subtree_sizes.size());
 
-			uint64_t counter = 0;
-
-			return counter + subtree_sizes[nr_children - 1];
+			return subtree_sizes[nr_children - 1];
 		}
 
 		uint64_t psum() {
 			return subtree_psums[nr_children - 1];
 		}
 
-		void overwrite_parent(node* P) {
+		void overwrite_parent(b_node* P) {
 			parent = P;
 		}
 
@@ -817,9 +800,9 @@ namespace bb {
 			else {
 
 				assert(children_len > 0);
-				children = vector<node*>(children_len);
+				children = vector<b_node*>(children_len);
 
-				for (auto& c : children) c = new node();
+				for (auto& c : children) c = new b_node();
 				for (auto& c : children) c->overwrite_parent(this);
 				for (auto& c : children) c->load(in);
 
@@ -859,11 +842,14 @@ namespace bb {
 		}
 
 	private:
+		uint32_t B;
+
+		uint32_t B_LEAF;
 
 		/*
 		 * new element between elements i and i+1
 		 */
-		void new_children(uint32_t i, node* left, node* right) {
+		void new_children(uint32_t i, b_node* left, b_node* right) {
 
 			assert(i < nr_children);
 			assert(not is_full()); 		//this node must not be full!
@@ -890,10 +876,10 @@ namespace bb {
 			nr_children++;
 
 			//temporary copy children
-			vector<node*> temp(children);
+			vector<b_node*> temp(children);
 
 			//reset children
-			children = vector<node*>(nr_children);
+			children = vector<b_node*>(nr_children);
 			uint32_t k = 0;//index in children
 
 			for (uint32_t j = 0; j < nr_children - 1; ++j) {
@@ -1093,11 +1079,11 @@ namespace bb {
 		 * splits this (full) node into 2 nodes with B keys each.
 		 * The left node is this node, and we return the right node
 		 */
-		node* split() {
+		b_node* split() {
 
 			assert(nr_children == 2 * B + 2);
 
-			node* right = NULL;
+			b_node* right = NULL;
 
 			if (has_leaves()) {
 
@@ -1110,13 +1096,13 @@ namespace bb {
 
 				assert(k == right_children_l.size());
 
-				right = new node(message_buffer, right_children_l, parent, rank() + 1);
+				right = new b_node(B, B_LEAF, right_children_l, parent, rank() + 1);
 				leaves.erase(leaves.begin() + nr_children / 2, leaves.end());
 
 			}
 			else {
 
-				vector<node*> right_children_n(nr_children - nr_children / 2);
+				vector<b_node*> right_children_n(nr_children - nr_children / 2);
 
 				ulint k = 0;
 
@@ -1125,7 +1111,7 @@ namespace bb {
 
 				assert(k == right_children_n.size());
 
-				right = new node(message_buffer, right_children_n, parent, rank() + 1);
+				right = new b_node(B, B_LEAF, right_children_n, parent, rank() + 1);
 
 				children.erase(children.begin() + nr_children / 2, children.end());
 
@@ -1152,10 +1138,10 @@ namespace bb {
 		vector<uint64_t> subtree_sizes;
 		vector<uint64_t> subtree_psums;
 
-		vector<node*> children;
+		vector<b_node*> children;
 		vector<leaf_type*> leaves;
 
-		node* parent = NULL; 		//NULL for root
+		b_node* parent = NULL; 		//NULL for root
 		uint32_t rank_ = 0; 		//rank of this node among its siblings
 
 		uint32_t nr_children = 0; 	//number of subtrees
@@ -1293,8 +1279,8 @@ namespace bb {
 				++j;
 			}
 
-			node* tmp_parent = this->parent;
-			node* tmp_child = this;
+			b_node* tmp_parent = this->parent;
+			b_node* tmp_child = this;
 			while (tmp_parent != NULL) {
 				uint32_t r = tmp_child->rank_;
 				uint32_t nc = tmp_parent->nr_children;
@@ -1328,7 +1314,7 @@ namespace bb {
 				}
 			}
 			assert(x == x->parent->children[x->rank()]);
-			node* y; //an adjacent sibling of x
+			b_node* y; //an adjacent sibling of x
 			bool y_is_prev; //is y the previous sibling?
 			if (rank() > 0) {
 				y = x->parent->children[rank() - 1];
@@ -1343,7 +1329,7 @@ namespace bb {
 				if (not x->has_leaves()) {
 					//steal a child of y,
 					//and give it to x
-					node* z; //the child
+					b_node* z; //the child
 					if (y_is_prev) {
 						//y is the previous sibling of x
 						z = y->children.back();
@@ -1496,8 +1482,8 @@ namespace bb {
 				//2B + 2
 				assert(x->nr_children == B + 1);
 				assert(y->nr_children == B + 1);
-				node* prev;
-				node* next;
+				b_node* prev;
+				b_node* next;
 				if (y_is_prev) {
 					prev = y;
 					next = x;
@@ -1506,13 +1492,13 @@ namespace bb {
 					prev = x;
 					next = y;
 				}
-				node* xy;
+				b_node* xy;
 				if (not x->has_leaves()) {
-					vector< node* > cc(prev->children.begin(), prev->children.end());
+					vector< b_node* > cc(prev->children.begin(), prev->children.end());
 					cc.insert(cc.end(), next->children.begin(), next->children.end());
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(message_buffer, cc, prev->parent, prev->rank());
+					xy = new b_node(B, B_LEAF, cc, prev->parent, prev->rank());
 				}
 				else {
 					assert(prev->nr_children == prev->leaves.size());
@@ -1528,7 +1514,7 @@ namespace bb {
 					}
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(message_buffer, cc, prev->parent, prev->rank());
+					xy = new b_node(B, B_LEAF, cc, prev->parent, prev->rank());
 				}
 
 				//update xy->parent

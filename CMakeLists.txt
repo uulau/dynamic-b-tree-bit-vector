@@ -46,7 +46,7 @@ else()
   add_compile_options(-Wall -Wextra -pedantic)
 endif()
 
-include_directories ("include")
+include_directories ("include", "include/sdsl")
 
 add_subdirectory ("test-case-generator")
 add_subdirectory ("benchmark")

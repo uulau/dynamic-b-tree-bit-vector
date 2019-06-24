@@ -1,20 +1,19 @@
 #pragma once
 
-#include "be-spsi.hpp"
-#include "bb-spsi.hpp"
-#include "spsi.hpp"
+#include "be-bv.hpp"
+#include "b-bv.hpp"
 #include "packed_vector.hpp"
 
-// templates: leaf type, leaf size, node fanout
-typedef b::spsi<packed_vector, 128, 16> btree;
-typedef bb::spsi<packed_vector, 128, 16> bbtree;
-typedef be::spsi<packed_vector, 128, 16> betree;
+using namespace dyn;
 
-template<class T> T* generate_tree(uint64_t amount) {
-	auto tree = new T(128);
+typedef b_bv<packed_vector> btree;
+typedef be_bv<packed_vector> betree;
+
+template<class T> T* generate_tree(uint64_t amount, bool val = false) {
+	auto tree = new T(16, 128, 128);
 
 	for (uint64_t i = 0; i < amount; i++) {
-		tree->push_back(i);
+		tree->push_back(val);
 	}
 
 	return tree;
@@ -30,10 +29,10 @@ template <class T> void insert_test(uint64_t size) {
 	auto tree = generate_tree<T>(0);
 
 	for (uint64_t i = 0; i <= size; i++) {
-		tree->insert(i, size - i);
+		tree->insert(i, true);
 		auto val = tree->at(i);
-		EXPECT_EQ(val, size - i);
-		if (val != size - i) {
+		EXPECT_EQ(val, true);
+		if (val != true) {
 			break;
 		}
 	}
@@ -44,10 +43,10 @@ template <class T> void insert_test(uint64_t size) {
 template <class T> void update_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	for (uint64_t i = 0; i < size; i++) {
-		tree->set(i, size - i);
+		tree->set(i, true);
 		auto val = tree->at(i);
-		EXPECT_EQ(val, size - i);
-		if (val != size - i) {
+		EXPECT_EQ(val, true);
+		if (val != true) {
 			break;
 		}
 	}
@@ -55,13 +54,11 @@ template <class T> void update_test(uint64_t size) {
 }
 
 template <class T> void sum_test(uint64_t size) {
-	auto tree = generate_tree<T>(size);
-	uint64_t sum = 0;
+	auto tree = generate_tree<T>(size, true);
 	for (uint64_t i = 0; i < size; i++) {
-		sum += i;
-		auto val = tree->psum(i);
-		EXPECT_EQ(sum, val);
-		if (sum != val) {
+		auto val = tree->rank(i + 1);
+		EXPECT_EQ(i + 1, val);
+		if (i + 1 != val) {
 			break;
 		}
 	}
@@ -69,11 +66,9 @@ template <class T> void sum_test(uint64_t size) {
 }
 
 template <class T> void search_test(uint64_t size) {
-	auto tree = generate_tree<T>(size);
-	uint64_t sum = 0;
+	auto tree = generate_tree<T>(size, true);
 	for (uint64_t i = 0; i < size; i++) {
-		sum += tree->at(i);
-		uint64_t val = tree->search(sum);
+		uint64_t val = tree->select(i);
 		EXPECT_EQ(val, i);
 		if (val != i) {
 			break;
@@ -85,10 +80,11 @@ template <class T> void search_test(uint64_t size) {
 template <class T> void remove_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	for (uint64_t i = 0; i < size - 1; i++) {
+		auto size = tree->size();
 		tree->remove(0);
-		auto val = tree->at(0);
-		EXPECT_TRUE(i + 1 == val);
-		if (i + 1 != val) {
+		auto new_size = tree->size();
+		EXPECT_TRUE(size - 1 == new_size);
+		if (size != new_size - 1) {
 			break;
 		}
 	}

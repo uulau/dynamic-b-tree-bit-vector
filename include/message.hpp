@@ -8,11 +8,11 @@ namespace dyn {
 	struct message {
 		message_type type;
 		uint64_t index;
-		uint64_t value;
+		bool value;
 		bool upsert_subtract;
 	};
 
-	const message insert_message(uint64_t index, uint64_t value) {
+	const message insert_message(uint64_t index, bool value) {
 		return message{ message_type::insert, index, value, false };
 	}
 
@@ -25,7 +25,7 @@ namespace dyn {
 
 	}
 
-	const message update_message(uint64_t index, uint64_t value, bool increment) {
+	const message update_message(uint64_t index, bool value, bool increment) {
 		return message{ message_type::update, index, value, increment };
 	}
 }

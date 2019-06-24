@@ -10,13 +10,15 @@
 using namespace std;
 using namespace dyn;
 
-void generate_test(uint64_t operations, double insert_ratio) {
+void generate_test(uint64_t operations, int ratio) {
 	assert(operations > 0);
+
+	double insert_ratio = (float)ratio / (float)100;
 
 	// Seed random number generator with time
 	srand(time(0));
 	auto insert_counter = 0;
-	ofstream file("..\\test.txt");
+	ofstream file("..\\test-" + to_string(operations) + "-" + to_string(ratio) + ".txt");
 	for (uint64_t i = 0; i < operations; i++) {
 		auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
 		if (file.is_open()) {
@@ -65,8 +67,10 @@ const vector<message> read_test() {
 	return messages;
 }
 
-const vector<message> generate_ram_test(uint64_t operations, double insert_ratio) {
+const vector<message> generate_ram_test(uint64_t operations, int ratio) {
 	assert(operations > 0);
+
+	double insert_ratio = (float)ratio / (float)100;
 
 	auto messages = vector<message>();
 	// Seed random number generator with time

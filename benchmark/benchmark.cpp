@@ -1,20 +1,20 @@
 #include "benchmark.h"
 #include <iostream>
 #include "packed_vector.hpp"
-#include "be-spsi.hpp"
-#include "bb-spsi.hpp"
-#include "spsi.hpp"
+#include "be-bv.hpp"
+#include "b-bv.hpp"
 #include "succinct_bitvector.hpp"
 #include "test-case.hpp"
 
-typedef b::spsi<packed_vector, 256, 16> btree;
-typedef bb::spsi<packed_vector, 256, 16> bbtree;
-typedef be::spsi<packed_vector, 256, 16> betree;
+typedef b_bv<packed_vector> btree;
+typedef be_bv<packed_vector> betree;
 
+static int UNIT_MIN = 1;
 static int UNIT_MAX = 8 << 12;
 
-static void BTreeQuery(benchmark::State& state) {
-	auto tree{ btree(0) };
+
+template <class T> static void Query(benchmark::State& state) {
+	auto tree{ T(state.range(1), state.range(2), state.range(3)) };
 
 	for (int i = 0; i < state.range(0); i++) {
 		tree.push_back(0);
@@ -24,84 +24,19 @@ static void BTreeQuery(benchmark::State& state) {
 		tree.at(tree.size() - 1);
 	}
 }
-BENCHMARK(BTreeQuery)->Range(1, UNIT_MAX);
 
-static void BETreeQuery(benchmark::State& state) {
-	auto tree{ betree(1) };
+BENCHMARK_TEMPLATE(Query, btree)->Ranges({ { UNIT_MIN, UNIT_MAX }, { UNIT_MIN, UNIT_MAX }, { UNIT_MIN, UNIT_MAX } });
+BENCHMARK_TEMPLATE(Query, betree)->Ranges({ { UNIT_MIN, UNIT_MAX }, {UNIT_MIN, UNIT_MAX}, {UNIT_MIN, UNIT_MAX}, {UNIT_MIN, UNIT_MAX} });
 
-	for (int i = 0; i < state.range(0); i++) {
-		tree.push_back(0);
-	}
+template <class T> static void Insertion(benchmark::State& state) {
+	auto tree{ T(state.range(1), state.range(2), state.range(3)) };
 
 	for (auto _ : state) {
-		tree.at(tree.size() - 1);
-	}
-}
-BENCHMARK(BETreeQuery)->Range(1, UNIT_MAX);
-
-static void BTreeInsertion(benchmark::State& state) {
-	auto tree{ btree(0) };
-
-	for (auto _ : state) {
-		tree.push_back(0);
-	}
-}
-BENCHMARK(BTreeInsertion);
-
-//static void BBTreeInsertion(benchmark::State& state) {
-//	auto tree{ bbtree(0, 0, state.range(0)) };
-//
-//	for (auto _ : state) {
-//		tree.push_back(0);
-//	}
-//}
-//BENCHMARK(BBTreeInsertion)->Range(1, UNIT_MAX);
-
-static void BETreeInsertion(benchmark::State& state) {
-	auto tree = betree(state.range(0));
-
-	for (auto _ : state) {
-		tree.push_back(0);
-	}
-}
-BENCHMARK(BETreeInsertion)->Range(1, UNIT_MAX);
-
-class OperationFixture : public benchmark::Fixture {
-public:
-	vector<message> messages;
-
-	void SetUp(const ::benchmark::State& state) {
-		messages = generate_ram_test(1000000, 0.05);
-	}
-
-	void TearDown(const ::benchmark::State& state) {
-		// Nothing
-	}
-};
-
-BENCHMARK_F(OperationFixture, BTreeOperations)(benchmark::State& state) {
-	for (auto _ : state) {
-		auto tree{ btree(0) };
-		execute_test(messages, tree);
+		tree.push_back(1);
 	}
 }
 
-//BENCHMARK_DEFINE_F(OperationFixture, BBTreeOperations)(benchmark::State& state) {
-//	for (auto _ : state) {
-//		auto tree{ bbtree(0, 0, state.range(0)) };
-//		execute_test(messages, tree);
-//	}
-//}
-
-//BENCHMARK_REGISTER_F(OperationFixture, BBTreeOperations)->Range(1, UNIT_MAX);
-
-BENCHMARK_DEFINE_F(OperationFixture, BETreeOperations)(benchmark::State& state) {
-	for (auto _ : state) {
-		auto tree{ betree(state.range(0)) };
-		execute_test(messages, tree);
-	}
-}
-
-BENCHMARK_REGISTER_F(OperationFixture, BETreeOperations)->Range(1, UNIT_MAX);
+BENCHMARK_TEMPLATE(Insertion, btree);
+BENCHMARK_TEMPLATE(Insertion, betree)->Range(UNIT_MIN, UNIT_MAX);
 
 BENCHMARK_MAIN();

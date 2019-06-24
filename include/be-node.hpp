@@ -2,12 +2,16 @@
 #include "message.hpp"
 
 using namespace std;
-using namespace dyn;
 
-namespace be {
-	template <class leaf_type, uint32_t B, uint32_t B_LEAF> class node {
+namespace dyn {
+	template <class leaf_type> class be_node {
 	public:
-		node(const node& n) {
+		be_node() = delete;
+
+		explicit be_node(const be_node& n) {
+			B = n.B;
+			B_LEAF = n.B_LEAF;
+			message_buffer = vector<message>(n.message_buffer);
 
 			subtree_sizes = { n.subtree_sizes };
 			subtree_psums = { n.subtree_psums };
@@ -43,12 +47,16 @@ namespace be {
 			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty and children is empty
 
 			message_buffer = n.message_buffer;
+
+			this->B = B;
+
+			this->B_LEAF = B_LEAF;
 		}
 
 		/*
 		 * create new root node. This node has only 1 (empty) child, which is a leaf.
 		 */
-		node(uint64_t message_count) {
+		explicit be_node(uint32_t B, uint32_t B_LEAF, uint64_t message_count) {
 			init_message_buffer(message_count);
 
 			subtree_sizes = vector<uint64_t>(2 * B + 2);
@@ -60,13 +68,15 @@ namespace be {
 			leaves = vector<leaf_type*>(1);
 			leaves[0] = new leaf_type();
 
+			this->B = B;
+			this->B_LEAF = B_LEAF;
 		}
 
 		/*
 		 * create new node given some children (other internal nodes),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<node*>& c, int64_t message_count, node* P = NULL, uint32_t rank = 0) {
+		explicit be_node(uint32_t B, uint32_t B_LEAF, vector<be_node*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
 
 			this->rank_ = rank;
 			this->parent = P;
@@ -94,7 +104,7 @@ namespace be {
 			nr_children = c.size();
 			has_leaves_ = false;
 
-			children = vector<node*>(c);
+			children = vector<be_node*>(c);
 
 			uint32_t r = 0;
 			for (auto cc : children) {
@@ -103,14 +113,15 @@ namespace be {
 				cc->overwrite_parent(this);
 
 			}
-
+			this->B = B;
+			this->B_LEAF = B_LEAF;
 		}
 
 		/*
 		 * create new node given some children (leaves),the parent, and the rank of this
 		 * node among its siblings
 		 */
-		node(vector<leaf_type*>& c, int64_t message_count, node* P = NULL, uint32_t rank = 0) {
+		explicit be_node(uint32_t B, uint32_t B_LEAF, vector<leaf_type*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
 
 			this->rank_ = rank;
 			this->parent = P;
@@ -139,7 +150,8 @@ namespace be {
 			init_message_buffer(message_count);
 
 			leaves = vector<leaf_type*>(c);
-
+			this->B = B;
+			this->B_LEAF = B_LEAF;
 		}
 
 		bool has_leaves() const {
@@ -175,8 +187,7 @@ namespace be {
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		uint64_t at(uint64_t const i, int64_t message_count = 0, int64_t increment = 0) {
-
+		bool at(uint64_t const i, int64_t message_count = 0, int64_t increment = 0) {
 			int counter = 0;
 			for (const auto& message : message_buffer) {
 
@@ -417,7 +428,7 @@ namespace be {
 			rank_++;
 		}
 
-		const node* get_parent() {
+		const be_node* get_parent() {
 			return parent;
 		}
 
@@ -429,12 +440,12 @@ namespace be {
 		 * is full and is splitted
 		 *
 		 */
-		node* insert(uint64_t i, uint64_t x) {
+		be_node* insert(uint64_t i, bool x) {
 			assert(i <= size());
-			//assert(is_root() || not parent->is_full());
+			assert(is_root() || not parent->is_full());
 
-			node* new_root = NULL;
-			node* right = NULL;
+			be_node* new_root = NULL;
+			be_node* right = NULL;
 
 			if (is_full()) {
 
@@ -459,9 +470,9 @@ namespace be {
 				//if this is the root, create new root
 				if (is_root()) {
 
-					vector<node*> vn{ this, right };
+					vector<be_node*> vn{ this, right };
 
-					new_root = new node(vn, message_buffer.capacity());
+					new_root = new be_node(B, B_LEAF, vn, message_buffer.capacity());
 					assert(not new_root->is_full());
 
 					this->overwrite_parent(new_root);
@@ -474,13 +485,13 @@ namespace be {
 					assert(rank() < parent->number_of_children());
 					parent->new_children(rank(), this, right);
 
-					node* n = parent;
+					be_node* n = parent;
 
 					while (n && n->is_full()) {
 						auto r = n->split();
 						if (n->is_root()) {
-							vector<node*> vn{ n, r };
-							new_root = new node(vn, message_buffer.capacity());
+							vector<be_node*> vn{ n, r };
+							new_root = new be_node(B, B_LEAF, vn, message_buffer.capacity());
 							assert(not new_root->is_full());
 							n->overwrite_parent(new_root);
 							r->overwrite_parent(new_root);
@@ -514,11 +525,11 @@ namespace be {
 		 * has only one non-leaf child.
 		 *
 		 */
-		node* remove(uint64_t i) {
+		be_node* remove(uint64_t i) {
 			assert(i < size_no_messages());
-			assert(is_root() || parent->can_lose());
+			//assert(is_root() || parent->can_lose());
 
-			node* p = this;
+			be_node* p = this;
 
 			while (p->parent) {
 				auto rank = p->rank();
@@ -533,7 +544,7 @@ namespace be {
 				}
 			}
 
-			node* x = this;
+			be_node* x = this;
 
 			if (not x->can_lose()) {
 				ensure_can_lose(i);
@@ -553,7 +564,7 @@ namespace be {
 			i = i - previous_size;
 			assert(i >= 0);
 			remove_leaf_index(i, j);
-			node* new_root = NULL;
+			be_node* new_root = NULL;
 
 			if (not p->has_leaves()) {
 				//if root has only one child, make that child the root
@@ -584,8 +595,8 @@ namespace be {
 			return subtree_psums[nr_children - 1] + sum_total;
 		}
 
-		node* create_message(const message m) {
-			node* new_root = NULL;
+		be_node* create_message(const message m) {
+			be_node* new_root = NULL;
 
 			if (has_leaves()) {
 				new_root = add_to_leaf(m);
@@ -608,6 +619,10 @@ namespace be {
 		}
 
 	private:
+		uint32_t B;
+
+		uint32_t B_LEAF;
+
 		template <bool upper> uint32_t subtree_size_bound(uint32_t i) {
 			uint32_t j = 0;
 
@@ -654,7 +669,7 @@ namespace be {
 			return sum;
 		}
 
-		void overwrite_parent(node* P) {
+		void overwrite_parent(be_node* P) {
 			parent = P;
 		}
 
@@ -662,8 +677,8 @@ namespace be {
 			return nr_children;
 		}
 
-		node* add_to_leaf(const message m) {
-			node* new_root = NULL;
+		be_node* add_to_leaf(const message m) {
+			be_node* new_root = NULL;
 			if (m.type == message_type::insert) {
 				new_root = insert(m.index, m.value);
 			}
@@ -676,8 +691,8 @@ namespace be {
 			return new_root;
 		}
 
-		node* flush_messages() {
-			node* new_root = NULL;
+		be_node* flush_messages() {
+			be_node* new_root = NULL;
 			while (!message_buffer.empty()) {
 				auto message = message_buffer[0];
 
@@ -786,7 +801,7 @@ namespace be {
 		/*
 		 * new element between elements i and i+1
 		 */
-		void new_children(uint32_t i, node* left, node* right) {
+		void new_children(uint32_t i, be_node* left, be_node* right) {
 
 			assert(i < nr_children);
 			assert(not is_full()); 		//this node must not be full!
@@ -813,10 +828,10 @@ namespace be {
 			nr_children++;
 
 			//temporary copy children
-			vector<node*> temp(children);
+			vector<be_node*> temp(children);
 
 			//reset children
-			children = vector<node*>(nr_children);
+			children = vector<be_node*>(nr_children);
 			uint32_t k = 0;//index in children
 
 			for (uint32_t j = 0; j < nr_children - 1; ++j) {
@@ -1016,11 +1031,11 @@ namespace be {
 		 * splits this (full) node into 2 nodes with B keys each.
 		 * The left node is this node, and we return the right node
 		 */
-		node* split() {
+		be_node* split() {
 
 			assert(nr_children == 2 * B + 2);
 
-			node* right = NULL;
+			be_node* right = NULL;
 
 			if (has_leaves()) {
 
@@ -1034,13 +1049,13 @@ namespace be {
 
 				assert(k == right_children_l.size());
 
-				right = new node(right_children_l, message_buffer.capacity(), parent, rank() + 1);
+				right = new be_node(B, B_LEAF, right_children_l, message_buffer.capacity(), parent, rank() + 1);
 				leaves.erase(leaves.begin() + nr_children / 2, leaves.end());
 
 			}
 			else {
 
-				vector<node*> right_children_n(nr_children - nr_children / 2);
+				vector<be_node*> right_children_n(nr_children - nr_children / 2);
 
 				ulint k = 0;
 
@@ -1050,7 +1065,7 @@ namespace be {
 
 				assert(k == right_children_n.size());
 
-				right = new node(right_children_n, message_buffer.capacity(), parent, rank() + 1);
+				right = new be_node(B, B_LEAF, right_children_n, message_buffer.capacity(), parent, rank() + 1);
 
 				children.erase(children.begin() + nr_children / 2, children.end());
 
@@ -1105,10 +1120,10 @@ namespace be {
 
 		vector<message> message_buffer;
 
-		vector<node*> children;
+		vector<be_node*> children;
 		vector<leaf_type*> leaves;
 
-		node* parent = NULL; 		//NULL for root
+		be_node* parent = NULL; 		//NULL for root
 		uint32_t rank_ = 0; 		//rank of this node among its siblings
 
 		uint32_t nr_children = 0; 	//number of subtrees
@@ -1247,8 +1262,8 @@ namespace be {
 				++j;
 			}
 
-			node* tmp_parent = this->parent;
-			node* tmp_child = this;
+			be_node* tmp_parent = this->parent;
+			be_node* tmp_child = this;
 			while (tmp_parent != NULL) {
 				uint32_t r = tmp_child->rank_;
 				uint32_t nc = tmp_parent->nr_children;
@@ -1282,7 +1297,7 @@ namespace be {
 				}
 			}
 			assert(x == x->parent->children[x->rank()]);
-			node* y; //an adjacent sibling of x
+			be_node* y; //an adjacent sibling of x
 			bool y_is_prev; //is y the previous sibling?
 			if (rank() > 0) {
 				y = x->parent->children[rank() - 1];
@@ -1297,7 +1312,7 @@ namespace be {
 				if (not x->has_leaves()) {
 					//steal a child of y,
 					//and give it to x
-					node* z; //the child
+					be_node* z; //the child
 					if (y_is_prev) {
 						//y is the previous sibling of x
 						z = y->children.back();
@@ -1450,8 +1465,8 @@ namespace be {
 				//2B + 2
 				assert(x->nr_children == B + 1);
 				assert(y->nr_children == B + 1);
-				node* prev;
-				node* next;
+				be_node* prev;
+				be_node* next;
 				if (y_is_prev) {
 					prev = y;
 					next = x;
@@ -1460,13 +1475,13 @@ namespace be {
 					prev = x;
 					next = y;
 				}
-				node* xy;
+				be_node* xy;
 				if (not x->has_leaves()) {
-					vector< node* > cc(prev->children.begin(), prev->children.end());
+					vector< be_node* > cc(prev->children.begin(), prev->children.end());
 					cc.insert(cc.end(), next->children.begin(), next->children.end());
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(cc, message_buffer.capacity(), prev->parent, prev->rank());
+					xy = new be_node(B, B_LEAF, cc, message_buffer.capacity(), prev->parent, prev->rank());
 				}
 				else {
 					assert(prev->nr_children == prev->leaves.size());
@@ -1482,7 +1497,7 @@ namespace be {
 					}
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new node(cc, message_buffer.capacity(), prev->parent, prev->rank());
+					xy = new be_node(B, B_LEAF, cc, message_buffer.capacity(), prev->parent, prev->rank());
 				}
 
 				//update xy->parent
