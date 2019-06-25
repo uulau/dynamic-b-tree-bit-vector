@@ -6,16 +6,12 @@ using namespace dyn;
 
 int main()
 {
-	auto const count = 10000000;
+	auto const count = 100000000;
 
 	auto tree = new be_bv<packed_vector>(16, 128, 128);
 
 	for (int i = 0; i < count; i++) {
 		tree->insert(i, true);
-		auto d = tree->at(i);
-		if (d != true) {
-			throw;
-		}
 	}
 
 	for (int i = 0; i < count; i++) {
@@ -23,19 +19,19 @@ int main()
 	}
 
 	for (int i = 0; i < count; i++) {
-		tree->set(i, false);
-		auto d = tree->at(i);
-		if (d != false) {
-			throw;
-		}
+		tree->rank(i + 1);
 	}
 
 	for (int i = 0; i < count; i++) {
-		auto size = tree->size();
+		tree->select(i);
+	}
+
+	for (int i = 0; i < count; i++) {
+		tree->set(i, false);
+	}
+
+	for (int i = 0; i < count; i++) {
 		tree->remove(0);
-		if (tree->size() != size - 1) {
-			throw;
-		}
 	}
 
 	delete tree;

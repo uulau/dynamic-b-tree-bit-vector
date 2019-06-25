@@ -29,11 +29,11 @@ namespace dyn {
 			}
 			else {
 
-				children = vector<node*>(n.nr_children, NULL);
+				children = vector<be_node*>(n.nr_children, NULL);
 
 				for (uint64_t i = 0; i < n.nr_children; ++i) {
 
-					children[i] = new node(*n.children[i]);
+					children[i] = new be_node(*n.children[i]);
 					children[i]->overwrite_parent(this);
 
 				}
@@ -196,7 +196,7 @@ namespace dyn {
 						return message.value;
 					}
 					else if (message.type == message_type::update) {
-						!message.upsert_subtract ? increment += message.value : increment -= message.value;
+						!message.value ? increment++ : increment--;
 					}
 				}
 
@@ -353,7 +353,7 @@ namespace dyn {
 		/*
 		 * increment or decrement i-th integer by delta
 		 */
-		void increment(uint64_t i, uint64_t delta, bool subtract = false) {
+		void increment(uint64_t i, bool delta) {
 			assert(i < size());
 
 			uint32_t j = subtree_size_bound<true>(i);
@@ -371,7 +371,7 @@ namespace dyn {
 				assert(j < nr_children);
 				assert(j < leaves.size());
 				assert(leaves[j] != NULL);
-				leaves[j]->increment(i - previous_size, delta, subtract);
+				leaves[j]->increment(i - previous_size, delta);
 
 			}
 			else {
@@ -380,7 +380,7 @@ namespace dyn {
 				assert(j < nr_children);
 				assert(j < children.size());
 				assert(children[j] != NULL);
-				children[j]->increment(i - previous_size, delta, subtract);
+				children[j]->increment(i - previous_size, delta);
 
 			}
 
@@ -391,7 +391,7 @@ namespace dyn {
 				assert(subtract or (subtree_psums[k] <= (~uint64_t(0)) - delta));
 				assert((not subtract) or (delta <= subtree_psums[k]));
 
-				subtree_psums[k] = (subtract ? subtree_psums[k] - delta : subtree_psums[k] + delta);
+				subtree_psums[k] = (delta ? subtree_psums[k] + delta : subtree_psums[k] - delta);
 
 			}
 
@@ -686,7 +686,7 @@ namespace dyn {
 				new_root = remove(m.index);
 			}
 			else if (m.type == message_type::update) {
-				increment(m.index, m.value, m.upsert_subtract);
+				increment(m.index, m.value);
 			}
 			return new_root;
 		}
@@ -738,7 +738,7 @@ namespace dyn {
 				break;
 			}
 			case message_type::update: {
-				m.upsert_subtract ? sum_total -= m.value : sum_total += m.value;
+				m.value ? sum_total++ : sum_total--;
 				message_buffer.emplace_back(m);
 				break;
 			}
@@ -761,7 +761,7 @@ namespace dyn {
 				break;
 			}
 			case message_type::update: {
-				m.upsert_subtract ? sum_total += m.value : sum_total -= m.value;
+				m.value ? sum_total-- : sum_total++;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}

@@ -473,7 +473,7 @@ namespace dyn {
 		/*
 		 * increment or decrement i-th integer by delta
 		 */
-		void increment(uint64_t i, uint64_t delta, bool subtract = false) {
+		void increment(uint64_t i, uint64_t delta) {
 
 			assert(i < size());
 
@@ -499,7 +499,7 @@ namespace dyn {
 				assert(j < nr_children);
 				assert(j < leaves.size());
 				assert(leaves[j] != NULL);
-				leaves[j]->increment(i - previous_size, delta, subtract);
+				leaves[j]->increment(i - previous_size, delta);
 
 			}
 			else {
@@ -508,7 +508,7 @@ namespace dyn {
 				assert(j < nr_children);
 				assert(j < children.size());
 				assert(children[j] != NULL);
-				children[j]->increment(i - previous_size, delta, subtract);
+				children[j]->increment(i - previous_size, delta);
 
 			}
 
@@ -519,7 +519,7 @@ namespace dyn {
 				assert(subtract or (subtree_psums[k] <= (~uint64_t(0)) - delta));
 				assert((not subtract) or (delta <= subtree_psums[k]));
 
-				subtree_psums[k] = (subtract ? subtree_psums[k] - delta : subtree_psums[k] + delta);
+				subtree_psums[k] = (delta ? subtree_psums[k] + delta : subtree_psums[k] - delta);
 
 			}
 

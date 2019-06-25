@@ -43,7 +43,7 @@ namespace dyn {
 			root->free_mem();
 			delete root;
 
-			root = new node(*sp.root);
+			root = new be_node(*sp.root);
 		}
 
 		bv_ref operator[](uint64_t i) {
@@ -51,7 +51,7 @@ namespace dyn {
 		}
 
 		uint64_t select(uint64_t i, bool b = true) const {
-			assert(b ? i < rank(size(), false) : i < rank(size(), true));
+			assert(b ? i < rank(size(), true) : i < rank(size(), false));
 			return b ? search(i + 1) : search_0(i + 1);
 		}
 
@@ -97,8 +97,10 @@ namespace dyn {
 		}
 
 		void set(uint64_t i, bool x) {
-			auto val = at(i);
-			increment(i, (val > x ? val - x : x - val), x < val);
+			assert(size() > 0);
+			assert(i < size());
+
+			root->increment(i, x);
 		}
 
 		void push_back(bool x) {
@@ -153,19 +155,6 @@ namespace dyn {
 			assert(x <= psum());
 
 			return root->contains(x);
-		}
-
-		void decrement(uint64_t i, uint64_t delta) {
-			increment(i, delta, true);
-		}
-
-		void increment(uint64_t i, uint64_t delta, bool subtract = false) {
-			assert(size() > 0);
-			assert(i < size());
-
-			assert(not subtract or delta <= at(i));
-
-			root->increment(i, delta, subtract);
 		}
 
 		b_node<leaf_type>* root = NULL;
