@@ -1,7 +1,6 @@
 #pragma once
 
 #define __SSE4_2__
-#define __BMI2__
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #include "stdint.h"

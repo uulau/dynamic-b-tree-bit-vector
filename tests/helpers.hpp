@@ -1,13 +1,8 @@
 #pragma once
 
-#include "be-bv.hpp"
-#include "b-bv.hpp"
-#include "packed_vector.hpp"
+#include "sdsl-bv.hpp"
 
 using namespace dyn;
-
-typedef b_bv<packed_vector> btree;
-typedef be_bv<packed_vector> betree;
 
 template<class T> T* generate_tree(uint64_t amount, bool val = false) {
 	auto tree = new T(16, 128, 128);
@@ -77,6 +72,18 @@ template <class T> void search_test(uint64_t size) {
 	delete tree;
 }
 
+template <> void search_test<sdsl_bv>(uint64_t size) {
+	auto tree = generate_tree<sdsl_bv>(size, true);
+	for (uint64_t i = 0; i < size; i++) {
+		uint64_t val = tree->select(i + 1);
+		EXPECT_EQ(val, i);
+		if (val != i) {
+			break;
+		}
+	}
+	delete tree;
+}
+
 template <class T> void remove_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	for (uint64_t i = 0; i < size - 1; i++) {
@@ -84,7 +91,7 @@ template <class T> void remove_test(uint64_t size) {
 		tree->remove(0);
 		auto new_size = tree->size();
 		EXPECT_TRUE(size - 1 == new_size);
-		if (size != new_size - 1) {
+		if (size - 1 != new_size) {
 			break;
 		}
 	}

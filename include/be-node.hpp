@@ -188,7 +188,6 @@ namespace dyn {
 		 * return i-th integer in the subtree rooted in this node
 		 */
 		bool at(uint64_t const i, int64_t message_count = 0, int64_t increment = 0) {
-			int counter = 0;
 			for (const auto& message : message_buffer) {
 
 				if (message.index == i) {
@@ -388,8 +387,8 @@ namespace dyn {
 			for (uint32_t k = j; k < nr_children; ++k) {
 
 				//check for under/overflows
-				assert(subtract or (subtree_psums[k] <= (~uint64_t(0)) - delta));
-				assert((not subtract) or (delta <= subtree_psums[k]));
+				assert(delta or (subtree_psums[k] <= (~uint64_t(0)) - delta));
+				assert((not delta) or (delta <= subtree_psums[k]));
 
 				subtree_psums[k] = (delta ? subtree_psums[k] + delta : subtree_psums[k] - delta);
 

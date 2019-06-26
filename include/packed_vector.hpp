@@ -28,7 +28,7 @@ namespace dyn {
 				words = vector<uint64_t>();
 			}
 			else {
-				words = vector<uint64_t>(size_ >> 6 + (size_ & int_per_word_ - 1 != 0));
+				words = vector<uint64_t>(size_ >> 6 + (size_ & (int_per_word_ - 1) != 0));
 			}
 		}
 
@@ -80,12 +80,8 @@ namespace dyn {
 
 			auto mod = i & (int_per_word_ - 1);
 
-			if (width_ <= 1 && mod != 0) {
-				__builtin_popcountll(words[i >> 6] & ((uint64_t(1) << mod) - 1));
-			}
-
-			for (uint64_t j = pos; j < i; ++j) {
-				s += at(j);
+			if (mod != 0) {
+				s += __builtin_popcountll(words[i >> 6] & ((uint64_t(1) << mod) - 1));
 			}
 
 			return s;
@@ -105,7 +101,7 @@ namespace dyn {
 
 			// optimization for bitvectors
 
-			for (uint64_t j = 0; j < (size_ / 64) * (width_ == 1) and s < x; ++j) {
+			for (uint64_t j = 0; j < (size_ >> 6) && s < x; ++j) {
 
 				pop = __builtin_popcountll(words[j]);
 				pos += 64;
@@ -148,7 +144,7 @@ namespace dyn {
 
 			// optimization for bitvectors
 
-			for (uint64_t j = 0; j < size_ / 64 and s < x; ++j) {
+			for (uint64_t j = 0; j < size_ >> 6 && s < x; ++j) {
 
 				pop = 64 - __builtin_popcountll(words[j]);
 				pos += 64;
@@ -161,7 +157,7 @@ namespace dyn {
 			pos -= 64 * (pos > 0);
 			s -= pop;
 
-			for (; pos < size_ and s < x; ++pos) {
+			for (; pos < size_ && s < x; ++pos) {
 
 				s += (1 - at(pos));
 
@@ -187,7 +183,7 @@ namespace dyn {
 
 			// optimization for bitvectors
 
-			for (uint64_t j = 0; j < (size_ / 64) * (width_ == 1) and s < x; ++j) {
+			for (uint64_t j = 0; j < (size_ >> 6) && s < x; ++j) {
 
 				pop = 64 + __builtin_popcountll(words[j]);
 				pos += 64;
@@ -256,7 +252,7 @@ namespace dyn {
 
 			assert(i < size_);
 
-			set_without_psum_update(i, val);
+			set<false>(i, val);
 			val ? psum_++ : psum_--;
 		}
 
@@ -272,32 +268,31 @@ namespace dyn {
 			//shift ints left, from position i + 1 onwords
 			shift_left(i);
 
-
-			while ((words.size() - extra_ - 1) * (int_per_word_) >= size_ - 1) {
+			while ((words.size() - extra_ - 1) << 6 >= size_ - 1) {
 				//more than extra_ extra words, delete
-				if (words.size() < extra_)
+				if (words.size() < extra_) {
 					break;
-
+				}
 				words.pop_back();
-
 			}
 
 			--size_;
-			psum_ -= x;
-
+			psum_--;
 		}
 
 		void insert(uint64_t i, uint64_t x) {
 
 			//not enough space for the new element:
 			//alloc extra_ new words
-			if (size_ + 1 > (words.size() * (int_per_word_))) {
+			if (size_ + 1 > (words.size() << 6)) {
 
 				//resize words
 				auto temp = vector<uint64_t>(words.size() + extra_, 0);
 
 				uint64_t j = 0;
-				for (auto t : words) temp[j++] = t;
+				for (auto t : words) {
+					temp[j++] = t;
+				}
 
 				words = vector<uint64_t>(temp);
 			}
@@ -306,7 +301,7 @@ namespace dyn {
 			shift_right(i);
 
 			//insert x
-			set_without_psum_update(i, x);
+			set<false>(i, x);
 
 			psum_ += x;
 			++size_;
@@ -323,14 +318,15 @@ namespace dyn {
 
 			//not enough space for the new element:
 			//push back a new word
-			if (size_ + 1 > (words.size() * (int_per_word_))) words.push_back(0);
+			if (size_ + 1 > (words.size() << 6)) {
+				words.push_back(0);
+			}
 
 			//insert x
-			set_without_psum_update(size(), x);
+			set<false>(size(), x);
 
-			psum_ += x;
+			psum_++;
 			size_++;
-
 		}
 
 		uint64_t size() {
@@ -344,15 +340,15 @@ namespace dyn {
 		 */
 		packed_vector* split() {
 
-			uint64_t tot_words = (size_ / int_per_word_) + (size_ % int_per_word_ != 0);
+			uint64_t tot_words = (size_ >> 6) + (size_ & int_per_word_ - 1 != 0);
 
 			assert(tot_words <= words.size());
 
-			uint64_t nr_left_words = tot_words / 2;
+			uint64_t nr_left_words = tot_words >> 1;
 
 			assert(nr_left_words > 0);
 
-			uint64_t nr_left_ints = nr_left_words * int_per_word_;
+			uint64_t nr_left_ints = nr_left_words << 6;
 
 			assert(size_ > nr_left_ints);
 			uint64_t nr_right_ints = size_ - nr_left_ints;
@@ -370,22 +366,20 @@ namespace dyn {
 		}
 
 		/* set i-th element to x. updates psum */
-		void set(uint64_t i, uint64_t x) {
+		template <bool psum> void set(uint64_t i, bool x) {
+			if constexpr (psum) {
+				x ? psum_++ : psum_--;
+			}
 
-			auto y = at(i);
+			uint64_t word_nr = i >> 6;
+			uint8_t pos = i & int_per_word_ - 1;
 
-			psum_ = x < y ? psum_ - (y - x) : psum_ + (x - y);
-
-			uint64_t word_nr = i / int_per_word_;
-			uint8_t pos = i % int_per_word_;
-
-			//set to 0 i-th entry
-			uint64_t MASK1 = ~(MASK << (width_ * pos));
-			words[word_nr] &= MASK1;
-
-			//insert x inside i-th position
-			words[word_nr] |= (x << (width_ * pos));
-
+			if (x) {
+				words[word_nr] |= (MASK << pos);
+			}
+			else {
+				words[word_nr] &= ~(MASK << pos);
+			}
 		}
 
 		/*
@@ -400,19 +394,6 @@ namespace dyn {
 		}
 
 	private:
-
-		void set_without_psum_update(uint64_t i, bool x) {
-			uint64_t word_nr = i >> 6;
-			uint8_t pos = i & int_per_word_ - 1;
-
-			if (x) {
-				words[word_nr] |= (MASK << pos);
-			}
-			else {
-				words[word_nr] &= ~(MASK << pos);
-			}
-		}
-
 		//shift right of 1 position elements starting
 		//from the i-th.
 		//assumption: last element does not overflow!
@@ -432,7 +413,7 @@ namespace dyn {
 			bool falling_out = at(falling_out_idx);
 
 			for (uint64_t j = falling_out_idx; j > i; --j) {
-				set_without_psum_update(j, at(j - 1));
+				set<false>(j, at(j - 1));
 			}
 
 			//now for the remaining integers we can work blockwise
@@ -448,7 +429,7 @@ namespace dyn {
 
 				assert(at(j * int_per_word_) == 0);
 
-				set_without_psum_update(val, falling_out);
+				set<false>(val, falling_out);
 
 				falling_out = falling_out_temp;
 
@@ -464,8 +445,7 @@ namespace dyn {
 			assert(int_per_word_ > 0);
 
 			if (i == (size_ - 1)) {
-				set_without_psum_update(i, 0);
-
+				set<false>(i, 0);
 				return;
 			}
 
@@ -483,7 +463,7 @@ namespace dyn {
 
 
 			for (uint64_t j = i; j <= falling_in_idx - 1; ++j) {
-				set_without_psum_update(j, at(j + 1));
+				set<false>(j, at(j + 1));
 			}
 
 			//now for the remaining integers we can work blockwise
@@ -493,7 +473,7 @@ namespace dyn {
 				if (j < words.size() - 1) {
 					falling_in = at((j + 1) << 6);
 
-					set_without_psum_update((j << 6) + int_per_word_ - 1, falling_in);
+					set<false>((j << 6) + int_per_word_ - 1, falling_in);
 				}
 
 			}
