@@ -13,6 +13,21 @@ namespace dyn {
 
 	public:
 
+		static uint64_t fast_mod(uint64_t num)
+		{
+			return num & (int_per_word_ - 1);
+		}
+
+		static uint64_t fast_div(uint64_t num)
+		{
+			return num >> 6;
+		}
+
+		static uint64_t fast_mul(uint64_t num)
+		{
+			return num << 6;
+		}
+
 		using pv_ref = pv_reference<packed_vector>;
 
 		/* new packed vector containing size integers (initialized to 0) of width bits each*/
@@ -28,7 +43,7 @@ namespace dyn {
 				words = vector<uint64_t>();
 			}
 			else {
-				words = vector<uint64_t>(size_ >> 6 + (size_ & (int_per_word_ - 1) != 0));
+				words = vector<uint64_t>(fast_div(size_) + (fast_mod(size_) != 0));
 			}
 		}
 
@@ -49,12 +64,7 @@ namespace dyn {
 		}
 
 		bool at(uint64_t i) {
-			// Divide by 64 (2^6)
-			auto word_index = i >> 6;
-			// int_per_word power of two, fast mod
-			auto offset = i & (int_per_word_ - 1);
-			// Get last bit
-			return MASK & (words[word_index] >> offset);
+			return MASK & (words[fast_div(i)] >> fast_mod(i));
 		}
 
 		uint64_t psum() {
@@ -73,15 +83,14 @@ namespace dyn {
 			uint64_t s = 0;
 			uint64_t pos = 0;
 
-			for (uint64_t j = 0; j < (i >> 6); ++j) {
+			for (uint64_t j = 0; j < (fast_div(i)); ++j) {
 				s += __builtin_popcountll(words[j]);
 				pos += 64;
 			}
 
-			auto mod = i & (int_per_word_ - 1);
-
-			if (mod != 0) {
-				s += __builtin_popcountll(words[i >> 6] & ((uint64_t(1) << mod) - 1));
+			auto const mod = fast_mod(i);
+			if (mod) {
+				s += __builtin_popcountll(words[fast_div(i)] & ((uint64_t(1) << mod) - 1));
 			}
 
 			return s;
@@ -101,7 +110,7 @@ namespace dyn {
 
 			// optimization for bitvectors
 
-			for (uint64_t j = 0; j < (size_ >> 6) && s < x; ++j) {
+			for (uint64_t j = 0; j < fast_div(size_) && s < x; ++j) {
 
 				pop = __builtin_popcountll(words[j]);
 				pos += 64;
@@ -111,19 +120,16 @@ namespace dyn {
 
 			// end optimization for bitvectors
 
-			pos -= (pos > 0) << 6;
+			pos -= fast_mul(pos > 0);
 			s -= pop;
 
-			for (; pos < size_ and s < x; ++pos) {
-
+			for (; pos < size_ && s < x; ++pos) {
 				s += at(pos);
-
 			}
 
 			pos -= pos != 0;
 
 			return pos;
-
 		}
 
 		/*
@@ -142,9 +148,7 @@ namespace dyn {
 			uint64_t pop = 0;
 			uint64_t pos = 0;
 
-			// optimization for bitvectors
-
-			for (uint64_t j = 0; j < size_ >> 6 && s < x; ++j) {
+			for (uint64_t j = 0; j < fast_div(size_) && s < x; ++j) {
 
 				pop = 64 - __builtin_popcountll(words[j]);
 				pos += 64;
@@ -152,9 +156,7 @@ namespace dyn {
 
 			}
 
-			// end optimization for bitvectors
-
-			pos -= (pos > 0) << 6;
+			pos -= fast_mul(pos > 0);
 			s -= pop;
 
 			for (; pos < size_ && s < x; ++pos) {
@@ -166,7 +168,6 @@ namespace dyn {
 			pos -= pos != 0;
 
 			return pos;
-
 		}
 
 		/*
@@ -181,9 +182,7 @@ namespace dyn {
 			uint64_t pop = 0;
 			uint64_t pos = 0;
 
-			// optimization for bitvectors
-
-			for (uint64_t j = 0; j < (size_ >> 6) && s < x; ++j) {
+			for (uint64_t j = 0; j < fast_div(size_) && s < x; ++j) {
 
 				pop = 64 + __builtin_popcountll(words[j]);
 				pos += 64;
@@ -191,12 +190,10 @@ namespace dyn {
 
 			}
 
-			// end optimization for bitvectors
-
-			pos -= (pos > 0) << 6;
+			pos -= fast_mul(pos > 0);
 			s -= pop;
 
-			for (; pos < size_ and s < x; ++pos) {
+			for (; pos < size_ && s < x; ++pos) {
 
 				s += (1 + at(pos));
 
@@ -218,7 +215,7 @@ namespace dyn {
 
 			uint64_t s = 0;
 
-			for (uint64_t j = 0; j < size_ and s < x; ++j) {
+			for (uint64_t j = 0; j < size_ && s < x; ++j) {
 
 				s += at(j);
 
@@ -238,7 +235,7 @@ namespace dyn {
 
 			uint64_t s = 0;
 
-			for (uint64_t j = 0; j < size_ and s < x; ++j) {
+			for (uint64_t j = 0; j < size_ && s < x; ++j) {
 
 				s += (at(j) + 1);
 
@@ -268,7 +265,7 @@ namespace dyn {
 			//shift ints left, from position i + 1 onwords
 			shift_left(i);
 
-			while ((words.size() - extra_ - 1) << 6 >= size_ - 1) {
+			while (fast_mul(words.size() - extra_ - 1) >= size_ - 1) {
 				//more than extra_ extra words, delete
 				if (words.size() < extra_) {
 					break;
@@ -284,7 +281,7 @@ namespace dyn {
 
 			//not enough space for the new element:
 			//alloc extra_ new words
-			if (size_ + 1 > (words.size() << 6)) {
+			if (size_ + 1 > fast_mul(words.size())) {
 
 				//resize words
 				auto temp = vector<uint64_t>(words.size() + extra_, 0);
@@ -318,7 +315,7 @@ namespace dyn {
 
 			//not enough space for the new element:
 			//push back a new word
-			if (size_ + 1 > (words.size() << 6)) {
+			if (size_ + 1 > (fast_mul(words.size()))) {
 				words.push_back(0);
 			}
 
@@ -340,7 +337,7 @@ namespace dyn {
 		 */
 		packed_vector* split() {
 
-			uint64_t tot_words = (size_ >> 6) + (size_ & int_per_word_ - 1 != 0);
+			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
 
@@ -348,7 +345,7 @@ namespace dyn {
 
 			assert(nr_left_words > 0);
 
-			uint64_t nr_left_ints = nr_left_words << 6;
+			uint64_t nr_left_ints = fast_mul(nr_left_words);
 
 			assert(size_ > nr_left_ints);
 			uint64_t nr_right_ints = size_ - nr_left_ints;
@@ -371,8 +368,8 @@ namespace dyn {
 				x ? psum_++ : psum_--;
 			}
 
-			uint64_t word_nr = i >> 6;
-			uint8_t pos = i & int_per_word_ - 1;
+			uint64_t word_nr = fast_div(i);
+			uint8_t pos = fast_mod(i);
 
 			if (x) {
 				words[word_nr] |= (MASK << pos);
@@ -405,9 +402,9 @@ namespace dyn {
 			assert(size_ + 1 <= words.size() * int_per_word_);
 
 			// Divide by 64 (and truncate)
-			uint64_t current_word = i >> 6;
+			uint64_t current_word = fast_div(i);
 
-			uint64_t falling_out_idx = (current_word << 6) + (int_per_word_ - 1);
+			uint64_t falling_out_idx = fast_mul(current_word) + (int_per_word_ - 1);
 
 			//integer that falls out from the right of current word
 			bool falling_out = at(falling_out_idx);
@@ -421,7 +418,7 @@ namespace dyn {
 			uint64_t falling_out_temp;
 
 			for (uint64_t j = current_word + 1; j < words.size(); ++j) {
-				auto val = j << 6;
+				auto val = fast_mul(j);
 
 				falling_out_temp = at(val + (int_per_word_ - 1));
 
@@ -450,10 +447,10 @@ namespace dyn {
 			}
 
 			// Divide by 64
-			uint64_t current_word = i >> 6;
+			uint64_t current_word = fast_div(i);
 
 			//integer that falls in from the right of current word
-			uint64_t falling_in_idx = (current_word + 1) << 6;
+			uint64_t falling_in_idx = fast_mul(current_word + 1);
 			uint64_t falling_in;
 			if (falling_in_idx > (size_ - 1)) {
 				//nothing falls in
@@ -471,9 +468,9 @@ namespace dyn {
 				words[j] = words[j] >> width_;
 
 				if (j < words.size() - 1) {
-					falling_in = at((j + 1) << 6);
+					falling_in = at(fast_mul(j + 1));
 
-					set<false>((j << 6) + int_per_word_ - 1, falling_in);
+					set<false>(fast_mul(j) + int_per_word_ - 1, falling_in);
 				}
 
 			}
