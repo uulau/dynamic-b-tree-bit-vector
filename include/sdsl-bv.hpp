@@ -62,25 +62,16 @@ namespace dyn {
 		}
 
 		void remove(uint64_t i) {
+			--message_count;
 			add_message(remove_message(i));
 		}
 
 		uint64_t size() const {
-			auto counter = 0;
-
-			for (const auto& message : message_buffer) {
-				if (message.type == message_type::insert) {
-					counter++;
-				}
-				else if (message.type == message_type::remove) {
-					counter--;
-				}
-			}
-
-			return counter + bv.size();
+			return message_count + bv.size();
 		}
 
 		void insert(uint64_t i, bool x) {
+			++message_count;
 			add_message(insert_message(i, x));
 		}
 
@@ -93,16 +84,16 @@ namespace dyn {
 		}
 
 		uint64_t select(uint64_t i) {
-			if (message_buffer.size() > 0) {
+			if (!ss.initialized() || message_buffer.size() > 0) {
 				flush_messages();
 				util::init_support(ss, &bv);
 			}
 
-			return ss(i);
+			return ss(i + 1);
 		}
 
 		uint64_t rank(uint64_t i) {
-			if (message_buffer.size() > 0) {
+			if (!rs.initialized() || message_buffer.size() > 0) {
 				flush_messages();
 				util::init_support(rs, &bv);
 			}
@@ -148,6 +139,7 @@ namespace dyn {
 			}
 		}
 
+		uint64_t message_count = 0;
 		select_support_mcl<1, 1> ss;
 		rank_support_v5<1, 1> rs;
 		bit_vector bv;

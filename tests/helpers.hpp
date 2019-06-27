@@ -1,9 +1,5 @@
 #pragma once
 
-#include "sdsl-bv.hpp"
-
-using namespace dyn;
-
 template<class T> T* generate_tree(uint64_t amount, bool val = false) {
 	auto tree = new T(16, 128, 128);
 
@@ -60,22 +56,10 @@ template <class T> void sum_test(uint64_t size) {
 	delete tree;
 }
 
-template <class T> void search_test(uint64_t size) {
+template <class T> void select_test(uint64_t size) {
 	auto tree = generate_tree<T>(size, true);
 	for (uint64_t i = 0; i < size; i++) {
 		uint64_t val = tree->select(i);
-		EXPECT_EQ(val, i);
-		if (val != i) {
-			break;
-		}
-	}
-	delete tree;
-}
-
-template <> void search_test<sdsl_bv>(uint64_t size) {
-	auto tree = generate_tree<sdsl_bv>(size, true);
-	for (uint64_t i = 0; i < size; i++) {
-		uint64_t val = tree->select(i + 1);
 		EXPECT_EQ(val, i);
 		if (val != i) {
 			break;

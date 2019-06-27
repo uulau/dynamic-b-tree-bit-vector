@@ -79,6 +79,11 @@ class select_support
 
         //! This method sets the supported bit_vector
         virtual void set_vector(const int_vector<1>* v=nullptr) = 0;
+
+		bool initialized() const
+		{
+			return m_v;
+		}
 };
 
 

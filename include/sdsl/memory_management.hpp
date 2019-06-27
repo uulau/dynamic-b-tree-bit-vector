@@ -467,5 +467,5 @@ class memory_manager
 };
 
 } // end namespace
-
+#include "memory_management.cpp"
 #endif

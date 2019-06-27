@@ -293,7 +293,7 @@ block_markused(mm_block_t* ptr)
     block_update(ptr,UNMASK_SIZE(ptr->size));
 }
 
-#ifndef MSVC_COMPILER
+#ifndef _MSC_VER
 void
 hugepage_allocator::coalesce_block(mm_block_t* block)
 {

@@ -12,7 +12,7 @@ int main()
 
 	//auto tree = new be_bv<packed_vector>(16, 128, 128);
 	auto tree = new sdsl_bv(128);
-	
+
 	for (int i = 0; i < count; i++) {
 		tree->insert(i, true);
 	}

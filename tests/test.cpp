@@ -128,28 +128,28 @@ TEST(BEBV, Update1000000) {
 	update_test<bebv>(1000000);
 }
 
-TEST(BEBV, Search10) {
-	search_test<bebv>(10);
+TEST(BEBV, Select10) {
+	select_test<bebv>(10);
 }
 
-TEST(BEBV, Search100) {
-	search_test<bebv>(100);
+TEST(BEBV, Select100) {
+	select_test<bebv>(100);
 }
 
-TEST(BEBV, Search1000) {
-	search_test<bebv>(1000);
+TEST(BEBV, Select1000) {
+	select_test<bebv>(1000);
 }
 
-TEST(BEBV, Search10000) {
-	search_test<bebv>(10000);
+TEST(BEBV, Select10000) {
+	select_test<bebv>(10000);
 }
 
-TEST(BEBV, Search100000) {
-	search_test<bebv>(100000);
+TEST(BEBV, Select100000) {
+	select_test<bebv>(100000);
 }
 
-TEST(BEBV, Search1000000) {
-	search_test<bebv>(1000000);
+TEST(BEBV, Select1000000) {
+	select_test<bebv>(1000000);
 }
 
 TEST(BBV, Insertion10) {
@@ -272,28 +272,28 @@ TEST(BBV, Update1000000) {
 	update_test<bbv>(1000000);
 }
 
-TEST(BBV, Search10) {
-	search_test<bbv>(10);
+TEST(BBV, Select10) {
+	select_test<bbv>(10);
 }
 
-TEST(BBV, Search100) {
-	search_test<bbv>(100);
+TEST(BBV, Select100) {
+	select_test<bbv>(100);
 }
 
-TEST(BBV, Search1000) {
-	search_test<bbv>(1000);
+TEST(BBV, Select1000) {
+	select_test<bbv>(1000);
 }
 
-TEST(BBV, Search10000) {
-	search_test<bbv>(10000);
+TEST(BBV, Select10000) {
+	select_test<bbv>(10000);
 }
 
-TEST(BBV, Search100000) {
-	search_test<bbv>(100000);
+TEST(BBV, Select100000) {
+	select_test<bbv>(100000);
 }
 
-TEST(BBV, Search1000000) {
-	search_test<bbv>(1000000);
+TEST(BBV, Select1000000) {
+	select_test<bbv>(1000000);
 }
 
 TEST(SDSLBV, Insertion10) {
@@ -416,26 +416,26 @@ TEST(SDSLBV, Update1000000) {
 	update_test<sdslbv>(1000000);
 }
 
-TEST(SDSLBV, Search10) {
-	search_test<sdslbv>(10);
+TEST(SDSLBV, Select10) {
+	select_test<sdslbv>(10);
 }
 
-TEST(SDSLBV, Search100) {
-	search_test<sdslbv>(100);
+TEST(SDSLBV, Select100) {
+	select_test<sdslbv>(100);
 }
 
-TEST(SDSLBV, Search1000) {
-	search_test<sdslbv>(1000);
+TEST(SDSLBV, Select1000) {
+	select_test<sdslbv>(1000);
 }
 
-TEST(SDSLBV, Search10000) {
-	search_test<sdslbv>(10000);
+TEST(SDSLBV, Select10000) {
+	select_test<sdslbv>(10000);
 }
 
-TEST(SDSLBV, Search100000) {
-	search_test<sdslbv>(100000);
+TEST(SDSLBV, Select100000) {
+	select_test<sdslbv>(100000);
 }
 
-TEST(SDSLBV, Search1000000) {
-	search_test<sdslbv>(1000000);
+TEST(SDSLBV, Select1000000) {
+	select_test<sdslbv>(1000000);
 }

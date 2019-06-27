@@ -43,7 +43,7 @@ namespace dyn {
 			root->free_mem();
 			delete root;
 
-			root = new be_node(*sp.root);
+			root = new b_node(*sp.root);
 		}
 
 		bv_ref operator[](uint64_t i) {

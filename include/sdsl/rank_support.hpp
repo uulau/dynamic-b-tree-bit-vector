@@ -77,6 +77,11 @@ class rank_support
          *  \sa init, rank
          */
         virtual void set_vector(const bit_vector* v=nullptr) = 0;
+
+		bool initialized()
+		{
+			return m_v;
+		}
 };
 
 inline rank_support::rank_support(const bit_vector* v)
