@@ -80,7 +80,7 @@ namespace dyn {
 		}
 
 		void push_back(bool x) {
-			add_message(insert_message(size(), x));
+			insert(size(), x);
 		}
 
 		uint64_t select(uint64_t i) {
@@ -113,9 +113,11 @@ namespace dyn {
 
 			for (const auto& message : message_buffer) {
 				if (message.type == message_type::insert) {
+					--message_count;
 					vals.insert(vals.begin() + message.index, message.value);
 				}
 				else if (message.type == message_type::remove) {
+					++message_count;
 					vals.erase(vals.begin() + message.index);
 				}
 				else {
