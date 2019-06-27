@@ -92,7 +92,7 @@ const vector<message> generate_ram_test(uint64_t operations, int ratio) {
 	return messages;
 }
 
-template<class K> void execute_test(vector<message> messages, K tree) {
+template<class K> void execute_test(const vector<message>& messages, K& tree) {
 	for (const auto& message : messages) {
 		if (message.type == message_type::insert) {
 			tree.insert(message.index, message.value);

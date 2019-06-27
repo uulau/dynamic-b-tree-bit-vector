@@ -3,7 +3,6 @@
 #include "packed_vector.hpp"
 #include "be-bv.hpp"
 #include "b-bv.hpp"
-#include "succinct_bitvector.hpp"
 #include "test-case.hpp"
 
 typedef b_bv<packed_vector> bbv;
@@ -18,48 +17,61 @@ static int const LEAF_MAX = 128;
 static int DATA_SIZE = 100000;
 
 template <class T> static void Query(benchmark::State& state) {
-	auto tree{ T(state.range(0), state.range(1), state.range(2)) };
+	T tree(state.range(0), state.range(1), state.range(2));
 
-	auto i = 0;
-	for (auto _ : state) {
-		tree.at(i);
-		state.PauseTiming();
+	for (auto i = 0; i < DATA_SIZE; i++) {
 		tree.push_back(true);
-		state.ResumeTiming();
+	}
+
+	uint64_t index = 0;
+	for (auto _ : state) {
+		tree.at(index);
+		index++;
+		if (index == DATA_SIZE)
+		{
+			index = 0;
+		}
 	}
 }
 
-BENCHMARK_TEMPLATE(Query, bbv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
-BENCHMARK_TEMPLATE(Query, bebv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Query, bbv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {NO_BUFFER, NO_BUFFER} });
+BENCHMARK_TEMPLATE(Query, bebv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Insertion(benchmark::State& state) {
-	auto tree{ T(state.range(0), state.range(1), state.range(2)) };
+	T tree(state.range(0), state.range(1), state.range(2));
 
+	uint64_t index = 0;
 	for (auto _ : state) {
-		state.PauseTiming();
-		auto size = tree.size();
-		state.ResumeTiming();
-		tree.insert(size, true);
+		tree.insert(index, true);
+		index++;
 	}
 }
 
 BENCHMARK_TEMPLATE(Insertion, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {NO_BUFFER, NO_BUFFER} });
 BENCHMARK_TEMPLATE(Insertion, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Deletion(benchmark::State& state) {
-	auto tree{ T(state.range(0), state.range(1), state.range(2)) };
+	T tree(state.range(0), state.range(1), state.range(2));
 
+	for (auto i = 0; i < DATA_SIZE; i++) {
+		tree.push_back(true);
+	}
+
+	uint64_t index = 0;
 	for (auto _ : state) {
-		state.PauseTiming();
-		if (tree.size() == 0) {
-			for (int i = 0; i < 100000; i++) {
+		tree.remove(0);
+		++index;
+		if (index == DATA_SIZE)
+		{
+			state.PauseTiming();
+			for (auto i = 0; i < DATA_SIZE; i++) {
 				tree.push_back(true);
 			}
+			index = 0;
+			state.ResumeTiming();
 		}
-		state.ResumeTiming();
-		tree.remove(0);
 	}
 }
 
@@ -69,14 +81,20 @@ BENCHMARK_TEMPLATE(Deletion, bebv)
 ->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Rank(benchmark::State& state) {
-	auto tree{ T(state.range(0), state.range(1), state.range(2)) };
+	T tree(state.range(0), state.range(1), state.range(2));
 
+	for (auto i = 0; i < DATA_SIZE; i++) {
+		tree.push_back(true);
+	}
+
+	uint64_t index = 0;
 	for (auto _ : state) {
-		state.PauseTiming();
-		tree.push_back(1);
-		auto index = tree.size();
-		state.ResumeTiming();
-		tree.rank(index);
+		tree.rank(index + 1);
+		++index;
+		if (index == DATA_SIZE)
+		{
+			index = 0;
+		}
 	}
 }
 
@@ -86,20 +104,40 @@ BENCHMARK_TEMPLATE(Rank, bebv)
 ->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Select(benchmark::State& state) {
-	auto tree{ T(state.range(0), state.range(1), state.range(2)) };
+	T tree(state.range(0), state.range(1), state.range(2));
 
+	for (auto i = 0; i < DATA_SIZE; i++) {
+		tree.push_back(true);
+	}
+
+	uint64_t index = 0;
 	for (auto _ : state) {
-		state.PauseTiming();
-		tree.push_back(1);
-		auto index = tree.size();
-		state.ResumeTiming();
-		tree.select(index - 1);
+		tree.select(index);
+		++index;
+		if (index == DATA_SIZE)
+		{
+			index = 0;
+		}
 	}
 }
 
 BENCHMARK_TEMPLATE(Select, bbv)
 ->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
 BENCHMARK_TEMPLATE(Select, bebv)
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+
+template <class T> static void Operations(benchmark::State& state) {
+	auto messages = generate_ram_test(10000000, 10);
+
+	for (auto _ : state) {
+		T tree(state.range(0), state.range(1), state.range(2));
+		execute_test(messages, tree);
+	}
+}
+
+BENCHMARK_TEMPLATE(Operations, bbv)
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
+BENCHMARK_TEMPLATE(Operations, bebv)
 ->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
 
 BENCHMARK_MAIN();

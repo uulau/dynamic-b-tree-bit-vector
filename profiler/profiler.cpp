@@ -11,7 +11,7 @@ int main()
 	auto const count = 1000000;
 
 	//auto tree = new be_bv<packed_vector>(16, 128, 128);
-	auto tree = new sdsl_bv(128);
+	auto tree = new sdsl_bv(80000);
 
 	for (int i = 0; i < count; i++) {
 		tree->insert(i, true);

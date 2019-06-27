@@ -111,7 +111,7 @@ namespace dyn {
 
 			// end optimization for bitvectors
 
-			pos -= 64 * (pos > 0);
+			pos -= (pos > 0) << 6;
 			s -= pop;
 
 			for (; pos < size_ and s < x; ++pos) {
@@ -154,7 +154,7 @@ namespace dyn {
 
 			// end optimization for bitvectors
 
-			pos -= 64 * (pos > 0);
+			pos -= (pos > 0) << 6;
 			s -= pop;
 
 			for (; pos < size_ && s < x; ++pos) {
@@ -193,7 +193,7 @@ namespace dyn {
 
 			// end optimization for bitvectors
 
-			pos -= 64 * (pos > 0);
+			pos -= (pos > 0) << 6;
 			s -= pop;
 
 			for (; pos < size_ and s < x; ++pos) {
