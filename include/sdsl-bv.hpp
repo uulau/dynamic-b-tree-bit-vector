@@ -23,10 +23,13 @@ namespace dyn {
 		~sdsl_bv() = default;
 
 		bool operator[](uint64_t i) const {
+			return at(i);
+		}
+
+		bool at(uint64_t i) const {
 			uint64_t original{ i };
 			uint64_t value{ 0 };
 			bool updated = false;
-			auto x = message_buffer.begin();
 			for (const auto& message : message_buffer) {
 				if (message.index <= i) {
 					if (message.type == message_type::insert) {
@@ -55,10 +58,6 @@ namespace dyn {
 			}
 
 			return bv[i];
-		}
-
-		bool at(uint64_t i) const {
-			return (*this)[i];
 		}
 
 		void remove(uint64_t i) {
@@ -104,11 +103,10 @@ namespace dyn {
 	private:
 		void flush_messages() {
 			vector<char> vals;
-			vals.reserve(bv.size());
+			vals.reserve(bv.size() + message_count);
 
-			auto index = 0;
-			for (auto x = bv.begin(); x != bv.end(); ++x) {
-				vals.push_back(*x);
+			for (const auto& x : bv) {
+				vals.emplace_back(x);
 			}
 
 			for (const auto& message : message_buffer) {

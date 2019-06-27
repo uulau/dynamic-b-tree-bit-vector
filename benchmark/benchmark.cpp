@@ -3,16 +3,19 @@
 #include "packed_vector.hpp"
 #include "be-bv.hpp"
 #include "b-bv.hpp"
+#include "sdsl-bv.hpp"
 #include "test-case.hpp"
 
 typedef b_bv<packed_vector> bbv;
 typedef be_bv<packed_vector> bebv;
+typedef sdsl_bv sdslbv;
 
 static int const UNIT_MIN = 1;
 static int const UNIT_MAX = 8 << 12;
-static int const NO_BUFFER = 0;
+static int const NO_VALUE = 0;
 static int const BRANCHING_MAX = 16;
-static int const LEAF_MAX = 128;
+static int const LEAF_MIN = 128;
+static int const LEAF_MAX = 8192;
 
 static int DATA_SIZE = 100000;
 
@@ -34,8 +37,9 @@ template <class T> static void Query(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Query, bbv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {NO_BUFFER, NO_BUFFER} });
-BENCHMARK_TEMPLATE(Query, bebv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Query, bbv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
+BENCHMARK_TEMPLATE(Query, bebv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Query, sdslbv)->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE},  {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Insertion(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -48,9 +52,11 @@ template <class T> static void Insertion(benchmark::State& state) {
 }
 
 BENCHMARK_TEMPLATE(Insertion, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {NO_BUFFER, NO_BUFFER} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
 BENCHMARK_TEMPLATE(Insertion, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, 8192}, {UNIT_MIN, UNIT_MAX} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Insertion, sdslbv)
+->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Deletion(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -76,9 +82,11 @@ template <class T> static void Deletion(benchmark::State& state) {
 }
 
 BENCHMARK_TEMPLATE(Deletion, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
 BENCHMARK_TEMPLATE(Deletion, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Deletion, sdslbv)
+->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Rank(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -99,9 +107,11 @@ template <class T> static void Rank(benchmark::State& state) {
 }
 
 BENCHMARK_TEMPLATE(Rank, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
 BENCHMARK_TEMPLATE(Rank, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Rank, sdslbv)
+->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Select(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -122,9 +132,11 @@ template <class T> static void Select(benchmark::State& state) {
 }
 
 BENCHMARK_TEMPLATE(Select, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
 BENCHMARK_TEMPLATE(Select, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Select, sdslbv)
+->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
 
 template <class T> static void Operations(benchmark::State& state) {
 	auto messages = generate_ram_test(10000000, 10);
@@ -136,8 +148,10 @@ template <class T> static void Operations(benchmark::State& state) {
 }
 
 BENCHMARK_TEMPLATE(Operations, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {NO_BUFFER, NO_BUFFER} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
 BENCHMARK_TEMPLATE(Operations, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MAX, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Operations, sdslbv)
+->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
 
 BENCHMARK_MAIN();
