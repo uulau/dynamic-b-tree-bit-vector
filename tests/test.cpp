@@ -33,28 +33,28 @@ TEST(BEBV, Insertion1000000) {
 	insert_test<bebv>(1000000);
 }
 
-TEST(BEBV, Sum10) {
-	sum_test<bebv>(10);
+TEST(BEBV, Rank10) {
+	rank_test<bebv>(10);
 }
 
-TEST(BEBV, Sum100) {
-	sum_test<bebv>(100);
+TEST(BEBV, Rank100) {
+	rank_test<bebv>(100);
 }
 
-TEST(BEBV, Sum1000) {
-	sum_test<bebv>(1000);
+TEST(BEBV, Rank1000) {
+	rank_test<bebv>(1000);
 }
 
-TEST(BEBV, Sum10000) {
-	sum_test<bebv>(10000);
+TEST(BEBV, Rank10000) {
+	rank_test<bebv>(10000);
 }
 
-TEST(BEBV, Sum100000) {
-	sum_test<bebv>(100000);
+TEST(BEBV, Rank100000) {
+	rank_test<bebv>(100000);
 }
 
-TEST(BEBV, Sum1000000) {
-	sum_test<bebv>(1000000);
+TEST(BEBV, Rank1000000) {
+	rank_test<bebv>(1000000);
 }
 
 TEST(BEBV, Size10) {
@@ -176,28 +176,28 @@ TEST(BBV, Insertion1000000) {
 	insert_test<bbv>(1000000);
 }
 
-TEST(BBV, Sum10) {
-	sum_test<bbv>(10);
+TEST(BBV, Rank10) {
+	rank_test<bbv>(10);
 }
 
-TEST(BBV, Sum100) {
-	sum_test<bbv>(100);
+TEST(BBV, Rank100) {
+	rank_test<bbv>(100);
 }
 
-TEST(BBV, Sum1000) {
-	sum_test<bbv>(1000);
+TEST(BBV, Rank1000) {
+	rank_test<bbv>(1000);
 }
 
-TEST(BBV, Sum10000) {
-	sum_test<bbv>(10000);
+TEST(BBV, Rank10000) {
+	rank_test<bbv>(10000);
 }
 
-TEST(BBV, Sum100000) {
-	sum_test<bbv>(100000);
+TEST(BBV, Rank100000) {
+	rank_test<bbv>(100000);
 }
 
-TEST(BBV, Sum1000000) {
-	sum_test<bbv>(1000000);
+TEST(BBV, Rank1000000) {
+	rank_test<bbv>(1000000);
 }
 
 TEST(BBV, Size10) {
@@ -320,28 +320,28 @@ TEST(SDSLBV, Insertion1000000) {
 	insert_test<sdslbv>(1000000);
 }
 
-TEST(SDSLBV, Sum10) {
-	sum_test<sdslbv>(10);
+TEST(SDSLBV, Rank10) {
+	rank_test<sdslbv>(10);
 }
 
-TEST(SDSLBV, Sum100) {
-	sum_test<sdslbv>(100);
+TEST(SDSLBV, Rank100) {
+	rank_test<sdslbv>(100);
 }
 
-TEST(SDSLBV, Sum1000) {
-	sum_test<sdslbv>(1000);
+TEST(SDSLBV, Rank1000) {
+	rank_test<sdslbv>(1000);
 }
 
-TEST(SDSLBV, Sum10000) {
-	sum_test<sdslbv>(10000);
+TEST(SDSLBV, Rank10000) {
+	rank_test<sdslbv>(10000);
 }
 
-TEST(SDSLBV, Sum100000) {
-	sum_test<sdslbv>(100000);
+TEST(SDSLBV, Rank100000) {
+	rank_test<sdslbv>(100000);
 }
 
-TEST(SDSLBV, Sum1000000) {
-	sum_test<sdslbv>(1000000);
+TEST(SDSLBV, Rank1000000) {
+	rank_test<sdslbv>(1000000);
 }
 
 TEST(SDSLBV, Size10) {

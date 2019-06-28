@@ -44,7 +44,7 @@ namespace dyn {
 
 			nr_children = n.nr_children; 	//number of subtrees
 
-			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty and children is empty
+			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty && children is empty
 
 			message_buffer = n.message_buffer;
 
@@ -73,7 +73,7 @@ namespace dyn {
 		}
 
 		/*
-		 * create new node given some children (other internal nodes),the parent, and the rank of this
+		 * create new node given some children (other internal nodes),the parent, && the rank of this
 		 * node among its siblings
 		 */
 		explicit be_node(uint32_t B, uint32_t B_LEAF, vector<be_node*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
@@ -118,7 +118,7 @@ namespace dyn {
 		}
 
 		/*
-		 * create new node given some children (leaves),the parent, and the rank of this
+		 * create new node given some children (leaves),the parent, && the rank of this
 		 * node among its siblings
 		 */
 		explicit be_node(uint32_t B, uint32_t B_LEAF, vector<leaf_type*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
@@ -280,7 +280,7 @@ namespace dyn {
 
 			uint32_t j = 0;
 
-			while (subtree_psums[j] < x or (subtree_psums[j] == 0 and x == 0)) {
+			while (subtree_psums[j] < x || (subtree_psums[j] == 0 && x == 0)) {
 
 				j++;
 				assert(j < subtree_psums.size());
@@ -291,7 +291,7 @@ namespace dyn {
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
 
-			assert(x > previous_psum or (previous_psum == 0 and x == 0));
+			assert(x > previous_psum || (previous_psum == 0 && x == 0));
 
 			//i-th element is in the j-th children
 
@@ -309,7 +309,7 @@ namespace dyn {
 
 		/*
 		 * This function corresponds to select_0 on bitvectors,
-		 * and works only if all integers are 0 or 1 (causes a failed
+		 * && works only if all integers are 0 || 1 (causes a failed
 		 * assertion otherwise!)
 		 *
 		 * returns smallest i such that the number of zeros before position
@@ -350,7 +350,7 @@ namespace dyn {
 		}
 
 		/*
-		 * increment or decrement i-th integer by delta
+		 * increment || decrement i-th integer by delta
 		 */
 		void increment(uint64_t i, bool delta) {
 			assert(i < size());
@@ -387,8 +387,8 @@ namespace dyn {
 			for (uint32_t k = j; k < nr_children; ++k) {
 
 				//check for under/overflows
-				assert(delta or (subtree_psums[k] <= (~uint64_t(0)) - delta));
-				assert((not delta) or (delta <= subtree_psums[k]));
+				assert(delta || (subtree_psums[k] <= (~uint64_t(0)) - delta));
+				//assert((!delta) || (delta <= subtree_psums[k]));
 
 				subtree_psums[k] = (delta ? subtree_psums[k] + delta : subtree_psums[k] - delta);
 
@@ -400,20 +400,22 @@ namespace dyn {
 			return parent == NULL;
 		}
 
-		bool is_full() {
+		bool is_full() const
+		{
 			assert(nr_children <= 2 * B + 2);
 			return nr_children == (2 * B + 2);
 		}
 
-		bool message_buffer_is_full() {
+		bool message_buffer_is_full() const
+		{
 			return message_buffer.size() == message_buffer.capacity();
 		}
 
 		/*
 		 * true iff this node can lose
-		 * a child and remain above the min.
+		 * a child && remain above the min.
 		 * number of children, B + 1
-		 * OR this node is the root
+		 * || this node is the root
 		 */
 		bool can_lose() {
 			return (nr_children >= (B + 2) || (is_root()));
@@ -436,22 +438,22 @@ namespace dyn {
 		 * If this node is the root, return the new root.
 		 *
 		 * new root could be different than current root if current root
-		 * is full and is splitted
+		 * is full && is splitted
 		 *
 		 */
-		be_node* insert(uint64_t i, bool x) {
+		be_node* insert(const uint64_t i, bool x) {
 			assert(i <= size());
-			assert(is_root() || not parent->is_full());
+			assert(is_root() || !parent->is_full());
 
-			be_node* new_root = NULL;
-			be_node* right = NULL;
+			be_node* new_root = nullptr;
+			be_node* right = nullptr;
 
 			if (is_full()) {
 
 				right = split();
 
-				assert(not is_full());
-				assert(not right->is_full());
+				assert(!is_full());
+				assert(!right->is_full());
 
 				//insert recursively
 				if (i < size()) {
@@ -472,7 +474,7 @@ namespace dyn {
 					vector<be_node*> vn{ this, right };
 
 					new_root = new be_node(B, B_LEAF, vn, message_buffer.capacity());
-					assert(not new_root->is_full());
+					assert(!new_root->is_full());
 
 					this->overwrite_parent(new_root);
 					right->overwrite_parent(new_root);
@@ -491,7 +493,7 @@ namespace dyn {
 						if (n->is_root()) {
 							vector<be_node*> vn{ n, r };
 							new_root = new be_node(B, B_LEAF, vn, message_buffer.capacity());
-							assert(not new_root->is_full());
+							assert(!new_root->is_full());
 							n->overwrite_parent(new_root);
 							r->overwrite_parent(new_root);
 							break;
@@ -511,7 +513,7 @@ namespace dyn {
 
 			}
 
-			//if not root, do not return anything.
+			//if !root, do !return anything.
 			return new_root;
 
 		}
@@ -545,7 +547,7 @@ namespace dyn {
 
 			be_node* x = this;
 
-			if (not x->can_lose()) {
+			if (!x->can_lose()) {
 				ensure_can_lose(i);
 			}
 
@@ -565,7 +567,7 @@ namespace dyn {
 			remove_leaf_index(i, j);
 			be_node* new_root = NULL;
 
-			if (not p->has_leaves()) {
+			if (!p->has_leaves()) {
 				//if root has only one child, make that child the root
 				if (p->nr_children == 1) {
 					new_root = p->children[0];
@@ -678,14 +680,24 @@ namespace dyn {
 
 		be_node* add_to_leaf(const message m) {
 			be_node* new_root = NULL;
-			if (m.type == message_type::insert) {
+			switch (m.type)
+			{
+			case message_type::insert:
+			{
 				new_root = insert(m.index, m.value);
+				break;
 			}
-			else if (m.type == message_type::remove) {
+			case message_type::remove:
+			{
 				new_root = remove(m.index);
+				break;
 			}
-			else if (m.type == message_type::update) {
+			case message_type::update:
+			{
 				increment(m.index, m.value);
+				break;
+			}
+			default: throw;
 			}
 			return new_root;
 		}
@@ -798,14 +810,14 @@ namespace dyn {
 		}
 
 		/*
-		 * new element between elements i and i+1
+		 * new element between elements i && i+1
 		 */
 		void new_children(uint32_t i, be_node* left, be_node* right) {
 
 			assert(i < nr_children);
-			assert(not is_full()); 		//this node must not be full!
-			assert(not has_leaves()); 	//this procedure can be called only on nodes
-			//whise children are not leaves
+			assert(!is_full()); 		//this node must !be full!
+			assert(!has_leaves()); 	//this procedure can be called only on nodes
+			//whise children are !leaves
 
 			//size/psum stored in previous counter
 			uint64_t previous_size = (i == 0 ? 0 : subtree_sizes[i - 1]);
@@ -814,7 +826,7 @@ namespace dyn {
 			//first of all, move forward counters i+1, i+2, ...
 			for (uint32_t j = subtree_sizes.size() - 1; j > i; j--) {
 
-				//node is not full so overwriting subtree_sizes[subtree_sizes.size()-1] is safe
+				//node is !full so overwriting subtree_sizes[subtree_sizes.size()-1] is safe
 				subtree_sizes[j] = subtree_sizes[j - 1];
 				subtree_psums[j] = subtree_psums[j - 1];
 
@@ -837,7 +849,7 @@ namespace dyn {
 
 				if (i == j) {
 
-					//insert left and right, ignore child i
+					//insert left && right, ignore child i
 					assert(k < nr_children);
 					children[k++] = left;
 					assert(k < nr_children);
@@ -857,7 +869,7 @@ namespace dyn {
 
 			assert(k == nr_children);
 
-			//children i and i+1 are new; we have now to increase the rank
+			//children i && i+1 are new; we have now to increase the rank
 			//of children i+2,...
 
 			for (uint32_t j = i + 2; j < nr_children; j++) {
@@ -872,7 +884,7 @@ namespace dyn {
 		void new_children(uint32_t i, leaf_type* left, leaf_type* right) {
 
 			assert(i < nr_children);
-			assert(not is_full()); //this node must not be full!
+			assert(!is_full()); //this node must !be full!
 			assert(has_leaves());
 
 			//treat this case separately
@@ -899,7 +911,7 @@ namespace dyn {
 			//first of all, move forward counters i+1, i+2, ...
 			for (uint32_t j = nr_children; j > i; j--) {
 
-				//node is not full so overwriting subtree_sizes[subtree_sizes.size()-1] is safe
+				//node is !full so overwriting subtree_sizes[subtree_sizes.size()-1] is safe
 				subtree_sizes[j] = subtree_sizes[j - 1];
 				subtree_psums[j] = subtree_psums[j - 1];
 
@@ -921,7 +933,7 @@ namespace dyn {
 			for (uint32_t j = 0; j < nr_children - 1; ++j) {
 				if (i == j) {
 
-					//insert left and right, ignore child i
+					//insert left && right, ignore child i
 					assert(k < nr_children);
 					leaves[k++] = left;
 					assert(k < nr_children);
@@ -941,11 +953,11 @@ namespace dyn {
 		}
 
 		/*
-		 * insert in a node, where we know that this node is not full
+		 * insert in a node, where we know that this node is !full
 		 */
 		void insert_without_split(uint64_t i, uint64_t x) {
 
-			assert(not is_full());
+			assert(!is_full());
 			assert(i <= size());
 
 			uint32_t j = nr_children - 1;
@@ -972,9 +984,9 @@ namespace dyn {
 			//i-th element is in the j-th children
 			uint64_t insert_pos = i - previous_size;
 
-			if (not has_leaves()) {
+			if (!has_leaves()) {
 
-				assert(not is_full());
+				assert(!is_full());
 				assert(insert_pos <= children[j]->size());
 				assert(children[j]->get_parent() == this);
 				children[j]->insert(insert_pos, x);
@@ -989,7 +1001,7 @@ namespace dyn {
 					leaf_type* right = leaves[j]->split();
 					leaf_type* left = leaves[j];
 
-					assert(not leaf_is_full(leaves[j]));
+					assert(!leaf_is_full(leaves[j]));
 
 					//insert new children in this node
 					this->new_children(j, left, right);
@@ -1016,11 +1028,11 @@ namespace dyn {
 			}
 
 			/*
-			 * we inserted an integer in some children, and number of
+			 * we inserted an integer in some children, && number of
 			 * children may have increased. re-compute counters
 			 */
-			assert(not has_leaves() or nr_children <= leaves.size());
-			assert(has_leaves() or nr_children <= children.size());
+			assert(!has_leaves() || nr_children <= leaves.size());
+			assert(has_leaves() || nr_children <= children.size());
 			assert(nr_children <= subtree_psums.size());
 			assert(nr_children <= subtree_sizes.size());
 			update_counters();
@@ -1028,13 +1040,13 @@ namespace dyn {
 
 		/*
 		 * splits this (full) node into 2 nodes with B keys each.
-		 * The left node is this node, and we return the right node
+		 * The left node is this node, && we return the right node
 		 */
 		be_node* split() {
 
 			assert(nr_children == 2 * B + 2);
 
-			be_node* right = NULL;
+			be_node* right = nullptr;
 
 			if (has_leaves()) {
 
@@ -1127,7 +1139,7 @@ namespace dyn {
 
 		uint32_t nr_children = 0; 	//number of subtrees
 
-		bool has_leaves_ = false;	//if true, leaves array is nonempty and children is empty
+		bool has_leaves_ = false;	//if true, leaves array is nonempty && children is empty
 
 		int64_t size_total = 0;
 		int64_t sum_total = 0;
@@ -1139,9 +1151,9 @@ namespace dyn {
 			//remove from the leaf directly, ensuring
 			//it remains of size at least B_LEAF
 			leaf_type* x = this->leaves[j];
-			if (not (leaf_can_lose(x) or (this->leaves.size() == 1))) {
+			if (!(leaf_can_lose(x) || (this->leaves.size() == 1))) {
 				//Need to ensure that x
-				//can lose a child and still have
+				//can lose a child && still have
 				//the min # of children
 
 				leaf_type* y; //an adjacent sibling of x
@@ -1201,7 +1213,7 @@ namespace dyn {
 					}
 				}
 				else {
-					//y cannot lose a child
+					//y can!lose a child
 					//means: neither x nor y can lose a child
 					//so: merge x,y into single node of size
 					//2B_LEAF 
@@ -1242,7 +1254,7 @@ namespace dyn {
 					}
 
 				}
-			} //end if not x->can_lose()
+			} //end if !x->can_lose()
 
 			//the leaf x is large enough for safe removal
 			//i has been computed wrt x
@@ -1281,7 +1293,7 @@ namespace dyn {
 		void ensure_can_lose(uint64_t i) {
 			auto x = this;
 			//Need to ensure that *x
-			//can lose a child and still have
+			//can lose a child && still have
 			//the min # of children
 
 			if (x != x->parent->children[x->rank()]) {
@@ -1308,7 +1320,7 @@ namespace dyn {
 			}
 
 			if (y->can_lose()) {
-				if (not x->has_leaves()) {
+				if (!x->has_leaves()) {
 					//steal a child of y,
 					//and give it to x
 					be_node* z; //the child
@@ -1458,7 +1470,7 @@ namespace dyn {
 				}
 			}
 			else {
-				//y cannot lose a child
+				//y can!lose a child
 				//means: neither x nor y can lose a child
 				//so: merge x,y into single node of size
 				//2B + 2
@@ -1475,7 +1487,7 @@ namespace dyn {
 					next = y;
 				}
 				be_node* xy;
-				if (not x->has_leaves()) {
+				if (!x->has_leaves()) {
 					vector< be_node* > cc(prev->children.begin(), prev->children.end());
 					cc.insert(cc.end(), next->children.begin(), next->children.end());
 
@@ -1526,7 +1538,7 @@ namespace dyn {
 				x->has_leaves_ = xy->has_leaves_;
 
 				uint32_t r = 0;
-				if (not x->has_leaves()) {
+				if (!x->has_leaves()) {
 					for (auto cc : x->children) {
 						cc->overwrite_parent(x);
 						cc->overwrite_rank(r++);

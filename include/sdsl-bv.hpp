@@ -15,7 +15,12 @@ namespace dyn {
 	public:
 		sdsl_bv() = delete;
 
-		explicit sdsl_bv(uint32_t B = 0, uint64_t message_count = 128, uint32_t B_LEAF = 0) {
+		explicit sdsl_bv(uint64_t message_count = 128) {
+			message_buffer = vector<message>();
+			message_buffer.reserve(message_count);
+		}
+
+		explicit sdsl_bv(uint32_t B = 0, uint32_t B_LEAF = 0, uint64_t message_count = 128) {
 			message_buffer = vector<message>();
 			message_buffer.reserve(message_count);
 		}
@@ -91,13 +96,113 @@ namespace dyn {
 			return ss(i + 1);
 		}
 
-		uint64_t rank(uint64_t i) {
-			if (!rs.initialized() || message_buffer.size() > 0) {
-				flush_messages();
-				util::init_support(rs, &bv);
+		uint64_t rank(const uint64_t i) {
+			auto static_rank = rs.initialized() ? rs.rank(i) : 0;
+
+			auto mb(message_buffer);
+
+			auto offset = 0;
+			auto total = 0;
+			for (auto x = mb.begin(); x != mb.end(); ++x) {
+				auto xm = *x;
+
+				if (xm.index >= i) {
+					continue;
+				}
+
+				switch (xm.type)
+				{
+				case message_type::insert:
+				{
+					--offset;
+					break;
+				}
+
+				case message_type::remove:
+				{
+					++offset;
+					break;
+				}
+				}
+
+				for (auto y = x + 1; y != mb.end(); ++y)
+				{
+					const auto ym = *y;
+
+					if (xm.index >= i) {
+						continue;
+					}
+
+					if (ym.index <= xm.index)
+					{
+
+						switch (xm.type)
+						{
+						case message_type::insert:
+						{
+							++xm.index;
+							break;
+						}
+
+						case message_type::remove:
+						{
+							if (xm.index == ym.index)
+							{
+								xm.index = -1;
+							}
+							else
+							{
+								--xm.index;
+							}
+							break;
+						}
+						case message_type::update:
+						{
+							if (ym.index == xm.index)
+							{
+								xm.value = ym.value;
+							}
+							break;
+						}
+						}
+					}
+				}
+
+				if (xm.index != -1 && xm.index < i)
+				{
+					switch (xm.type)
+					{
+					case message_type::insert:
+					{
+						total += xm.value;
+						static_rank -= bv[xm.index];
+						break;
+					}
+
+					case message_type::remove:
+					{
+						total -= bv[xm.index];
+						break;
+					}
+					case message_type::update:
+					{
+						xm.value ? ++total : --total;
+						break;
+					}
+					}
+				}
 			}
 
-			return rs(i);
+			// More removals
+			if (offset > 0)
+			{
+				for (auto index = i + 1; index < index + offset; index++)
+				{
+					total += bv[index];
+				}
+			}
+
+			return static_rank + total;
 		}
 
 	private:
@@ -128,8 +233,9 @@ namespace dyn {
 			for (auto i = 0; i < bv.size(); i++) {
 				bv[i] = vals[i];
 			}
-
 			message_buffer.clear();
+			util::init_support(rs, &bv);
+			util::init_support(ss, &bv);
 		}
 
 		void add_message(message message) {

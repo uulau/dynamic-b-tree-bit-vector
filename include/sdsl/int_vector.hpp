@@ -1357,7 +1357,7 @@ inline void int_vector<t_width>::set_int(size_type idx, value_type x, const uint
 
 template<uint8_t t_width>
 inline auto int_vector<t_width>::operator[](const size_type& idx) -> reference {
-    assert(idx < this->size());
+    //assert(idx < this->size());
     size_type i = idx * m_width;
     return reference(this->m_data + (i>>6), i&0x3F, m_width);
 }

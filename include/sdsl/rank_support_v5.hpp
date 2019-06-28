@@ -115,7 +115,7 @@ class rank_support_v5 : public rank_support
 
         size_type rank(size_type idx) const {
             assert(m_v != nullptr);
-            assert(idx <= m_v->size());
+            //assert(idx <= m_v->size());
             const uint64_t* p = m_basic_block.data()
                                 + ((idx>>10)&0xFFFFFFFFFFFFFFFEULL);// (idx/2048)*2
 //                     ( prefix sum of the 6x64bit blocks | (idx%2048)/(64*6) )

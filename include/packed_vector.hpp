@@ -10,20 +10,19 @@
 
 namespace dyn {
 	class packed_vector {
-
 	public:
 
-		static uint64_t fast_mod(uint64_t num)
+		static uint64_t fast_mod(const uint64_t num)
 		{
 			return num & (int_per_word_ - 1);
 		}
 
-		static uint64_t fast_div(uint64_t num)
+		static uint64_t fast_div(const uint64_t num)
 		{
 			return num >> 6;
 		}
 
-		static uint64_t fast_mul(uint64_t num)
+		static uint64_t fast_mul(const uint64_t num)
 		{
 			return num << 6;
 		}
@@ -31,7 +30,7 @@ namespace dyn {
 		using pv_ref = pv_reference<packed_vector>;
 
 		/* new packed vector containing size integers (initialized to 0) of width bits each*/
-		packed_vector(uint64_t size = 0) {
+		explicit packed_vector(const uint64_t size = 0) {
 
 			/* if size > 0, then width must be > 0*/
 			assert(size == 0 || width_ > 0);
@@ -47,7 +46,7 @@ namespace dyn {
 			}
 		}
 
-		packed_vector(vector<uint64_t>& words, uint64_t new_size) {
+		packed_vector(vector<uint64_t>& words, const uint64_t new_size) {
 			this->words = vector<uint64_t>(words);
 			this->size_ = new_size;
 			psum_ = psum(size_ - 1);
@@ -260,8 +259,6 @@ namespace dyn {
 		}
 
 		void remove(uint64_t i) {
-			auto x = this->at(i);
-
 			//shift ints left, from position i + 1 onwords
 			shift_left(i);
 
@@ -326,7 +323,8 @@ namespace dyn {
 			size_++;
 		}
 
-		uint64_t size() {
+		uint64_t size() const
+		{
 			return size_;
 		}
 
@@ -336,19 +334,18 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-
-			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
+			const auto tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
 
-			uint64_t nr_left_words = tot_words >> 1;
+			const auto nr_left_words = tot_words >> 1;
 
 			assert(nr_left_words > 0);
 
-			uint64_t nr_left_ints = fast_mul(nr_left_words);
+			const auto nr_left_ints = fast_mul(nr_left_words);
 
 			assert(size_ > nr_left_ints);
-			uint64_t nr_right_ints = size_ - nr_left_ints;
+			const auto nr_right_ints = size_ - nr_left_ints;
 
 			auto right_words = vector<uint64_t>(words.begin() + nr_left_words, words.begin() + tot_words);
 			words = vector<uint64_t>(words.begin(), words.begin() + nr_left_words + extra_);
@@ -356,20 +353,19 @@ namespace dyn {
 			size_ = nr_left_ints;
 			psum_ = psum(size_ - 1);
 
-			auto right = new packed_vector(right_words, nr_right_ints);
+			const auto right = new packed_vector(right_words, nr_right_ints);
 
 			return right;
-
 		}
 
 		/* set i-th element to x. updates psum */
-		template <bool psum> void set(uint64_t i, bool x) {
+		template <bool psum> void set(const uint64_t i, const bool x) {
 			if constexpr (psum) {
 				x ? psum_++ : psum_--;
 			}
 
-			uint64_t word_nr = fast_div(i);
-			uint8_t pos = fast_mod(i);
+			const auto word_nr = fast_div(i);
+			const uint8_t pos = fast_mod(i);
 
 			if (x) {
 				words[word_nr] |= (MASK << pos);
@@ -382,11 +378,12 @@ namespace dyn {
 		/*
 		 * return total number of bits occupied in memory by this object instance
 		 */
-		ulint bit_size() {
+		ulint bit_size() const
+		{
 			return (sizeof(packed_vector) + words.capacity() * sizeof(ulint)) * 8;
 		}
 
-		uint64_t width() {
+		static uint64_t width() {
 			return width_;
 		}
 
@@ -442,24 +439,21 @@ namespace dyn {
 			assert(int_per_word_ > 0);
 
 			if (i == (size_ - 1)) {
-				set<false>(i, 0);
+				set<false>(i, false);
 				return;
 			}
 
 			// Divide by 64
-			uint64_t current_word = fast_div(i);
+			auto current_word = fast_div(i);
 
 			//integer that falls in from the right of current word
-			uint64_t falling_in_idx = fast_mul(current_word + 1);
-			uint64_t falling_in;
+			auto falling_in_idx = fast_mul(current_word + 1);
 			if (falling_in_idx > (size_ - 1)) {
-				//nothing falls in
-				falling_in = 0;
 				falling_in_idx = size_ - 1;
 			}
 
 
-			for (uint64_t j = i; j <= falling_in_idx - 1; ++j) {
+			for (auto j = i; j <= falling_in_idx - 1; ++j) {
 				set<false>(j, at(j + 1));
 			}
 
@@ -468,7 +462,7 @@ namespace dyn {
 				words[j] = words[j] >> width_;
 
 				if (j < words.size() - 1) {
-					falling_in = at(fast_mul(j + 1));
+					const uint64_t falling_in = at(fast_mul(j + 1));
 
 					set<false>(fast_mul(j) + int_per_word_ - 1, falling_in);
 				}
@@ -493,7 +487,7 @@ namespace dyn {
 		static constexpr uint8_t int_per_word_ = 64;
 		static constexpr uint64_t MASK = 1;
 		static constexpr uint8_t extra_ = 2;
-		vector<uint64_t> words;
+		vector<uint64_t> words{};
 		uint64_t psum_ = 0;
 		uint64_t size_ = 0;
 	};

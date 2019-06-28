@@ -10,19 +10,118 @@ typedef b_bv<packed_vector> bbv;
 typedef be_bv<packed_vector> bebv;
 typedef sdsl_bv sdslbv;
 
-static int const UNIT_MIN = 1;
-static int const UNIT_MAX = 8 << 12;
-static int const NO_VALUE = 0;
-static int const BRANCHING_MAX = 16;
-static int const LEAF_MIN = 128;
-static int const LEAF_MAX = 8192;
+static int const no_value = 0;
 
-static int DATA_SIZE = 100000;
+static int const branching_min = 4;
+static int const branching_max = 32;
+static int const branching_multiplier = 2;
 
-template <class T> static void Query(benchmark::State& state) {
+static int const leaf_min = 256;
+static int const leaf_max = 16384;
+static int const leaf_multiplier = 4;
+
+static int const buffer_min = 4;
+static int const buffer_max = 16384;
+static int const buffer_multiplier = 8;
+
+static int data_size = 100000;
+
+static void be_tree(benchmark::internal::Benchmark* benchmark) {
+	for (auto b = branching_min; b <= branching_max; b *= branching_multiplier)
+	{
+		for (auto b_leaf = leaf_min; b_leaf <= leaf_max; b_leaf *= leaf_multiplier)
+		{
+			for (auto buffer = buffer_min; buffer <= buffer_max; buffer *= buffer_multiplier)
+			{
+				benchmark->Args({ b, b_leaf, buffer });
+			}
+		}
+	}
+}
+
+static void b_tree(benchmark::internal::Benchmark* benchmark) {
+	for (auto b = branching_min; b <= branching_max; b *= branching_multiplier)
+	{
+		for (auto b_leaf = leaf_min; b_leaf <= leaf_max; b_leaf *= leaf_multiplier)
+		{
+			benchmark->Args({ b, b_leaf, no_value });
+		}
+	}
+}
+
+static void sdsl_tree(benchmark::internal::Benchmark* benchmark) {
+
+	for (auto buffer = buffer_min; buffer <= buffer_max; buffer *= buffer_multiplier)
+	{
+		benchmark->Args({ no_value, no_value, buffer });
+	}
+}
+
+//static void rank_build(benchmark::State& state) {
+//	bit_vector bv(state.range(0));
+//
+//	for (int i = 0; i < bv.size(); ++i)
+//	{
+//		if (i % 2)
+//		{
+//			bv[i] = true;
+//		}
+//		else
+//		{
+//			bv[i] = false;
+//		}
+//	}
+//
+//	rank_support_v5<1, 1> rs;
+//
+//	for (auto _ : state) {
+//		util::init_support(rs, &bv);
+//	}
+//}
+//
+//BENCHMARK(rank_build)->Range(1024, 33554432);
+//
+//static void rank_performance(benchmark::State& state) {
+//	sdsl::bit_vector bv(state.range(0));
+//
+//	for (auto i = 0; i < bv.size(); ++i)
+//	{
+//		if (i % 2)
+//		{
+//			bv[i] = true;
+//		}
+//		else
+//		{
+//			bv[i] = false;
+//		}
+//	}
+//
+//	rank_support_v5<1, 1> rs;
+//
+//	util::init_support(rs, &bv);
+//
+//	vector<int> randoms;
+//	const auto max = bv.size();
+//
+//	for (auto i = 0; i < state.range(1); ++i)
+//	{
+//		randoms.push_back(rand() % max);
+//	}
+//
+//	for (auto _ : state) {
+//		for (int64_t i = 0; i < state.range(1); ++i)
+//		{
+//			rs.rank(randoms[i]);
+//		}
+//	}
+//}
+//
+//BENCHMARK(rank_performance)->Ranges({ {1024, 33554432}, {1024, 33554432} });
+
+template <class T> static void query(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
 
-	for (auto i = 0; i < DATA_SIZE; i++) {
+	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
 	}
 
@@ -30,16 +129,15 @@ template <class T> static void Query(benchmark::State& state) {
 	for (auto _ : state) {
 		tree.at(index);
 		index++;
-		if (index == DATA_SIZE)
+		if (index == data_size)
 		{
 			index = 0;
 		}
 	}
 }
 
-BENCHMARK_TEMPLATE(Query, bbv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
-BENCHMARK_TEMPLATE(Query, bebv)->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
-BENCHMARK_TEMPLATE(Query, sdslbv)->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE},  {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(query, bbv)->Apply(b_tree);
+BENCHMARK_TEMPLATE(query, bebv)->Apply(be_tree);
 
 template <class T> static void Insertion(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -51,17 +149,13 @@ template <class T> static void Insertion(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Insertion, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
-BENCHMARK_TEMPLATE(Insertion, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
-BENCHMARK_TEMPLATE(Insertion, sdslbv)
-->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Insertion, bbv)->Apply(b_tree);
+BENCHMARK_TEMPLATE(Insertion, bebv)->Apply(be_tree);
 
 template <class T> static void Deletion(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
 
-	for (auto i = 0; i < DATA_SIZE; i++) {
+	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
 	}
 
@@ -69,10 +163,10 @@ template <class T> static void Deletion(benchmark::State& state) {
 	for (auto _ : state) {
 		tree.remove(0);
 		++index;
-		if (index == DATA_SIZE)
+		if (index == data_size)
 		{
 			state.PauseTiming();
-			for (auto i = 0; i < DATA_SIZE; i++) {
+			for (auto i = 0; i < data_size; i++) {
 				tree.push_back(true);
 			}
 			index = 0;
@@ -81,17 +175,13 @@ template <class T> static void Deletion(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Deletion, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
-BENCHMARK_TEMPLATE(Deletion, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
-BENCHMARK_TEMPLATE(Deletion, sdslbv)
-->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Deletion, bbv)->Apply(b_tree);
+BENCHMARK_TEMPLATE(Deletion, bebv)->Apply(be_tree);
 
 template <class T> static void Rank(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
 
-	for (auto i = 0; i < DATA_SIZE; i++) {
+	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
 	}
 
@@ -99,24 +189,20 @@ template <class T> static void Rank(benchmark::State& state) {
 	for (auto _ : state) {
 		tree.rank(index + 1);
 		++index;
-		if (index == DATA_SIZE)
+		if (index == data_size)
 		{
 			index = 0;
 		}
 	}
 }
 
-BENCHMARK_TEMPLATE(Rank, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
-BENCHMARK_TEMPLATE(Rank, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
-BENCHMARK_TEMPLATE(Rank, sdslbv)
-->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Rank, bbv)->Apply(b_tree);
+BENCHMARK_TEMPLATE(Rank, bebv)->Apply(be_tree);
 
 template <class T> static void Select(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
 
-	for (auto i = 0; i < DATA_SIZE; i++) {
+	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
 	}
 
@@ -124,19 +210,15 @@ template <class T> static void Select(benchmark::State& state) {
 	for (auto _ : state) {
 		tree.select(index);
 		++index;
-		if (index == DATA_SIZE)
+		if (index == data_size)
 		{
 			index = 0;
 		}
 	}
 }
 
-BENCHMARK_TEMPLATE(Select, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
-BENCHMARK_TEMPLATE(Select, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
-BENCHMARK_TEMPLATE(Select, sdslbv)
-->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Select, bbv)->Apply(b_tree);
+BENCHMARK_TEMPLATE(Select, bebv)->Apply(be_tree);
 
 template <class T> static void Operations(benchmark::State& state) {
 	auto messages = generate_ram_test(10000000, 10);
@@ -147,11 +229,17 @@ template <class T> static void Operations(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Operations, bbv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {NO_VALUE, NO_VALUE} });
-BENCHMARK_TEMPLATE(Operations, bebv)
-->Ranges({ { BRANCHING_MAX, BRANCHING_MAX }, {LEAF_MIN, LEAF_MAX}, {UNIT_MIN, UNIT_MAX} });
-BENCHMARK_TEMPLATE(Operations, sdslbv)
-->Ranges({ { NO_VALUE, NO_VALUE }, {NO_VALUE, NO_VALUE}, {UNIT_MIN, UNIT_MAX} });
+BENCHMARK_TEMPLATE(Operations, bbv)->Apply(b_tree);
+BENCHMARK_TEMPLATE(Operations, bebv)->Apply(be_tree);
 
-BENCHMARK_MAIN();
+int main(int argc, char** argv)
+{
+	::benchmark::Initialize(&argc, argv);
+
+	if (::benchmark::ReportUnrecognizedArguments(argc, argv))
+	{
+		return 1;
+	}
+
+	::benchmark::RunSpecifiedBenchmarks();
+}
