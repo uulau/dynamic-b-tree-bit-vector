@@ -14,7 +14,7 @@ namespace dyn {
 
 		static uint64_t fast_mod(const uint64_t num)
 		{
-			return num & (int_per_word_ - 1);
+			return num & (63);
 		}
 
 		static uint64_t fast_div(const uint64_t num)
@@ -29,12 +29,7 @@ namespace dyn {
 
 		using pv_ref = pv_reference<packed_vector>;
 
-		/* new packed vector containing size integers (initialized to 0) of width bits each*/
 		explicit packed_vector(const uint64_t size = 0) {
-
-			/* if size > 0, then width must be > 0*/
-			assert(size == 0 || width_ > 0);
-
 			size_ = size;
 			psum_ = 0;
 
@@ -46,11 +41,13 @@ namespace dyn {
 			}
 		}
 
-		packed_vector(vector<uint64_t>& words, const uint64_t new_size) {
-			this->words = vector<uint64_t>(words);
+		explicit packed_vector(vector<uint64_t>&& _words, const uint64_t new_size) {
+			this->words = _words;
 			this->size_ = new_size;
 			psum_ = psum(size_ - 1);
 		}
+
+		virtual ~packed_vector() {}
 
 		/*
 		 * high-level access to the vector. Supports assign, access,
@@ -253,9 +250,7 @@ namespace dyn {
 		}
 
 		void append(uint64_t x) {
-
-			insert(size(), x);
-
+			push_back(x);
 		}
 
 		void remove(uint64_t i) {
@@ -438,7 +433,7 @@ namespace dyn {
 			//number of integers that fit in a memory word
 			assert(int_per_word_ > 0);
 
-			if (i == (size_ - 1)) {
+			if (i == 0) {
 				set<false>(i, false);
 				return;
 			}
@@ -447,11 +442,7 @@ namespace dyn {
 			auto current_word = fast_div(i);
 
 			//integer that falls in from the right of current word
-			auto falling_in_idx = fast_mul(current_word + 1);
-			if (falling_in_idx > (size_ - 1)) {
-				falling_in_idx = size_ - 1;
-			}
-
+			auto falling_in_idx = min(fast_mul(current_word + 1), size_ - 1);
 
 			for (auto j = i; j <= falling_in_idx - 1; ++j) {
 				set<false>(j, at(j + 1));

@@ -21,6 +21,8 @@ namespace dyn {
 		}
 
 		explicit sdsl_bv(uint32_t B = 0, uint32_t B_LEAF = 0, uint64_t message_count = 128) {
+			std::ignore = B;
+			std::ignore = B_LEAF;
 			message_buffer = vector<message>();
 			message_buffer.reserve(message_count);
 		}

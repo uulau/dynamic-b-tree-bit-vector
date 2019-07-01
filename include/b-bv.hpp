@@ -26,6 +26,7 @@ namespace dyn {
 		explicit b_bv(uint32_t B, uint32_t B_LEAF, uint64_t message_count = 20) {
 			this->B = B;
 			this->B_LEAF = B_LEAF;
+			std::ignore = message_count;
 			root = new b_node <leaf_type >(B, B_LEAF, message_count);
 		}
 

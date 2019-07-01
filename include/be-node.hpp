@@ -197,6 +197,7 @@ namespace dyn {
 
 					if (message.type == message_type::update) {
 						!message.value ? increment++ : increment--;
+						continue;
 					}
 				}
 
@@ -218,14 +219,10 @@ namespace dyn {
 
 			uint32_t j = subtree_size_bound<true>(i);
 
-			//size stored in previous counter
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
 			assert(i >= previous_size);
 
-			//i-th element is in the j-th children
-
-			//if children are leaves, extract element form j-th leaf
 			if (has_leaves()) {
 
 				assert(j < leaves.size());
@@ -397,7 +394,7 @@ namespace dyn {
 
 		}
 
-		bool is_root() {
+		bool is_root() const {
 			return parent == NULL;
 		}
 
@@ -418,11 +415,11 @@ namespace dyn {
 		 * number of children, B + 1
 		 * || this node is the root
 		 */
-		bool can_lose() {
+		bool can_lose() const {
 			return (nr_children >= (B + 2) || (is_root()));
 		}
 
-		bool leaf_can_lose(leaf_type* leaf) {
+		bool leaf_can_lose(leaf_type* leaf) const {
 			return (leaf->size() >= (B_LEAF + 1));
 		}
 
@@ -430,7 +427,7 @@ namespace dyn {
 			rank_++;
 		}
 
-		const be_node* get_parent() {
+		const be_node* get_parent() const {
 			return parent;
 		}
 

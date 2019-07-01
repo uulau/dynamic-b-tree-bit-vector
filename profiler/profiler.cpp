@@ -10,7 +10,7 @@ int main()
 {
 	auto const count = 10000000;
 
-	auto tree = new be_bv<packed_vector>(uint32_t(0), uint32_t(10), uint64_t(0));
+	auto tree = new be_bv<packed_vector>(uint32_t(8), uint32_t(4096), uint64_t(256));
 
 	for (int i = 0; i < count; i++) {
 		tree->insert(i, true);
