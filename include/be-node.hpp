@@ -194,7 +194,8 @@ namespace dyn {
 					if (message.type == message_type::insert) {
 						return message.value;
 					}
-					else if (message.type == message_type::update) {
+
+					if (message.type == message_type::update) {
 						!message.value ? increment++ : increment--;
 					}
 				}

@@ -1,5 +1,6 @@
 #include "includes.hpp"
 #include "message.hpp"
+#include <iso646.h>
 
 using namespace std;
 using namespace dyn;

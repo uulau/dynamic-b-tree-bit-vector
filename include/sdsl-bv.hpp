@@ -96,113 +96,10 @@ namespace dyn {
 			return ss(i + 1);
 		}
 
-		uint64_t rank(const uint64_t i) {
-			auto static_rank = rs.initialized() ? rs.rank(i) : 0;
+		uint64_t rank(uint64_t i) {
+			// TODO
 
-			auto mb(message_buffer);
-
-			auto offset = 0;
-			auto total = 0;
-			for (auto x = mb.begin(); x != mb.end(); ++x) {
-				auto xm = *x;
-
-				if (xm.index >= i) {
-					continue;
-				}
-
-				switch (xm.type)
-				{
-				case message_type::insert:
-				{
-					--offset;
-					break;
-				}
-
-				case message_type::remove:
-				{
-					++offset;
-					break;
-				}
-				}
-
-				for (auto y = x + 1; y != mb.end(); ++y)
-				{
-					const auto ym = *y;
-
-					if (xm.index >= i) {
-						continue;
-					}
-
-					if (ym.index <= xm.index)
-					{
-
-						switch (xm.type)
-						{
-						case message_type::insert:
-						{
-							++xm.index;
-							break;
-						}
-
-						case message_type::remove:
-						{
-							if (xm.index == ym.index)
-							{
-								xm.index = -1;
-							}
-							else
-							{
-								--xm.index;
-							}
-							break;
-						}
-						case message_type::update:
-						{
-							if (ym.index == xm.index)
-							{
-								xm.value = ym.value;
-							}
-							break;
-						}
-						}
-					}
-				}
-
-				if (xm.index != -1 && xm.index < i)
-				{
-					switch (xm.type)
-					{
-					case message_type::insert:
-					{
-						total += xm.value;
-						static_rank -= bv[xm.index];
-						break;
-					}
-
-					case message_type::remove:
-					{
-						total -= bv[xm.index];
-						break;
-					}
-					case message_type::update:
-					{
-						xm.value ? ++total : --total;
-						break;
-					}
-					}
-				}
-			}
-
-			// More removals
-			if (offset > 0)
-			{
-				for (auto index = i + 1; index < index + offset; index++)
-				{
-					total += bv[index];
-				}
-			}
-
-			return static_rank + total;
+			throw;
 		}
 
 	private:
@@ -238,8 +135,17 @@ namespace dyn {
 			util::init_support(ss, &bv);
 		}
 
+		void update_messages(message& m)
+		{
+			// TODO
+			throw;
+		};
+
 		void add_message(message message) {
+			update_messages(message);
+
 			message_buffer.emplace_back(message);
+
 			if (message_buffer.size() == message_buffer.capacity()) {
 				flush_messages();
 			}

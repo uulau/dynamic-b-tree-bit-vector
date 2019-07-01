@@ -10,6 +10,7 @@ typedef b_bv<packed_vector> bbv;
 typedef be_bv<packed_vector> bebv;
 typedef sdsl_bv sdslbv;
 
+
 static int const no_value = 0;
 
 static int const branching_min = 4;
@@ -57,68 +58,68 @@ static void sdsl_tree(benchmark::internal::Benchmark* benchmark) {
 	}
 }
 
-//static void rank_build(benchmark::State& state) {
-//	bit_vector bv(state.range(0));
-//
-//	for (int i = 0; i < bv.size(); ++i)
-//	{
-//		if (i % 2)
-//		{
-//			bv[i] = true;
-//		}
-//		else
-//		{
-//			bv[i] = false;
-//		}
-//	}
-//
-//	rank_support_v5<1, 1> rs;
-//
-//	for (auto _ : state) {
-//		util::init_support(rs, &bv);
-//	}
-//}
-//
-//BENCHMARK(rank_build)->Range(1024, 33554432);
-//
-//static void rank_performance(benchmark::State& state) {
-//	sdsl::bit_vector bv(state.range(0));
-//
-//	for (auto i = 0; i < bv.size(); ++i)
-//	{
-//		if (i % 2)
-//		{
-//			bv[i] = true;
-//		}
-//		else
-//		{
-//			bv[i] = false;
-//		}
-//	}
-//
-//	rank_support_v5<1, 1> rs;
-//
-//	util::init_support(rs, &bv);
-//
-//	vector<int> randoms;
-//	const auto max = bv.size();
-//
-//	for (auto i = 0; i < state.range(1); ++i)
-//	{
-//		randoms.push_back(rand() % max);
-//	}
-//
-//	for (auto _ : state) {
-//		for (int64_t i = 0; i < state.range(1); ++i)
-//		{
-//			rs.rank(randoms[i]);
-//		}
-//	}
-//}
-//
-//BENCHMARK(rank_performance)->Ranges({ {1024, 33554432}, {1024, 33554432} });
+static void rank_build(benchmark::State& state) {
+	bit_vector bv(state.range(0));
 
-template <class T> static void query(benchmark::State& state) {
+	for (int i = 0; i < bv.size(); ++i)
+	{
+		if (i % 2)
+		{
+			bv[i] = true;
+		}
+		else
+		{
+			bv[i] = false;
+		}
+	}
+
+	rank_support_v5<1, 1> rs;
+
+	for (auto _ : state) {
+		util::init_support(rs, &bv);
+	}
+}
+
+BENCHMARK(rank_build)->Range(1024, 33554432);
+
+static void rank_performance(benchmark::State& state) {
+	sdsl::bit_vector bv(state.range(0));
+
+	for (auto i = 0; i < bv.size(); ++i)
+	{
+		if (i % 2)
+		{
+			bv[i] = true;
+		}
+		else
+		{
+			bv[i] = false;
+		}
+	}
+
+	rank_support_v5<1, 1> rs;
+
+	util::init_support(rs, &bv);
+
+	vector<int> randoms;
+	const auto max = bv.size();
+
+	for (auto i = 0; i < state.range(1); ++i)
+	{
+		randoms.push_back(rand() % max);
+	}
+
+	for (auto _ : state) {
+		for (int64_t i = 0; i < state.range(1); ++i)
+		{
+			benchmark::DoNotOptimize(rs.rank(randoms[i]));
+		}
+	}
+}
+
+BENCHMARK(rank_performance)->Ranges({ {1024, 33554432}, {1024, 33554432} });
+
+template <class T> static void Query(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
 
 	for (auto i = 0; i < data_size; i++) {
@@ -127,7 +128,7 @@ template <class T> static void query(benchmark::State& state) {
 
 	uint64_t index = 0;
 	for (auto _ : state) {
-		tree.at(index);
+		benchmark::DoNotOptimize(tree.at(index));
 		index++;
 		if (index == data_size)
 		{
@@ -136,8 +137,8 @@ template <class T> static void query(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(query, bbv)->Apply(b_tree);
-BENCHMARK_TEMPLATE(query, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Query, bbv)->Apply(b_tree);
+BENCHMARK_TEMPLATE(Query, bebv)->Apply(be_tree);
 
 template <class T> static void Insertion(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));

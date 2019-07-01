@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <iso646.h>
 #include "includes.hpp"
 #include "b-node.hpp"
 #include "bv_reference.hpp"

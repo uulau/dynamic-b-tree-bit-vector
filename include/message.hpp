@@ -2,7 +2,7 @@
 
 namespace dyn {
 	enum message_type {
-		insert, remove, query, update
+		insert, remove, query, update, rank, select
 	};
 
 	struct message {
@@ -25,5 +25,13 @@ namespace dyn {
 
 	const message update_message(uint64_t index, bool value) {
 		return message{ message_type::update, index, value };
+	}
+
+	const message rank_message(uint64_t index) {
+		return message{ message_type::rank, index, 0 };
+	}
+
+	const message select_message(uint64_t index) {
+		return message{ message_type::select, index, 0 };
 	}
 }
