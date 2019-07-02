@@ -4,8 +4,10 @@
 
 #pragma once
 
-#include "includes.hpp"
 #include "msvc.hpp"
+#include <cassert>
+#include <algorithm>
+#include <vector>
 #include "pv_reference.hpp"
 
 namespace dyn {
@@ -32,7 +34,7 @@ namespace dyn {
 			this->size_ = size;
 			this->psum_ = 0;
 
-			words = vector<uint64_t>(fast_div(size_) + (fast_mod(size_) != 0));
+			words = std::vector<uint64_t>(fast_div(size_) + (fast_mod(size_) != 0));
 
 			assert(size_ / int_per_word_ <= words.size());
 			assert((size_ / int_per_word_ == words.size()
@@ -40,7 +42,7 @@ namespace dyn {
 				&& "uninitialized non-zero values in the end of the vector");
 		}
 
-		explicit packed_vector(vector<uint64_t>&& _words, uint64_t const new_size) {
+		explicit packed_vector(std::vector<uint64_t>&& _words, uint64_t const new_size) {
 			this->words = _words;
 			this->size_ = new_size;
 			this->psum_ = psum(size_ - 1);
@@ -357,7 +359,7 @@ namespace dyn {
 			uint64_t nr_right_ints = size_ - nr_left_ints;
 
 			assert(words.begin() + nr_left_words + extra_ < words.end());
-			vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
+			std::vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
 			std::copy(&words[nr_left_words], &words[tot_words], right_words.begin());
 			words.resize(nr_left_words + extra_);
 			std::fill(words.begin() + nr_left_words, words.end(), 0);
@@ -465,7 +467,7 @@ namespace dyn {
 			auto current_word = fast_div(i);
 
 			//integer that falls in from the right of current word
-			auto falling_in_idx = min(fast_mul(current_word + 1), size_ - 1);
+			auto falling_in_idx = std::min(fast_mul(current_word + 1), size_ - 1);
 
 			for (auto j = i; j <= falling_in_idx - 1; ++j) {
 				set<false>(j, at(j + 1));
@@ -501,7 +503,7 @@ namespace dyn {
 		static constexpr uint8_t int_per_word_ = 64;
 		static constexpr uint64_t MASK = 1;
 		static constexpr uint8_t extra_ = 2;
-		vector<uint64_t> words{};
+		std::vector<uint64_t> words{};
 		uint64_t psum_ = 0;
 		uint64_t size_ = 0;
 	};

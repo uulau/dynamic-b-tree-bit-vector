@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 namespace dyn {
 	template <class Container> class pv_reference {
 

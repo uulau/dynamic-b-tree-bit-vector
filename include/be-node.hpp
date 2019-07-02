@@ -1,9 +1,8 @@
 #pragma once
 
-#include "includes.hpp"
 #include "message.hpp"
-
-using namespace std;
+#include <vector>
+#include <iostream>
 
 namespace dyn {
 	template <class leaf_type> class be_node {
@@ -78,7 +77,7 @@ namespace dyn {
 		 * create new node given some children (other internal nodes),the parent, && the rank of this
 		 * node among its siblings
 		 */
-		explicit be_node(uint32_t B, uint32_t B_LEAF, vector<be_node*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
+		explicit be_node(uint32_t B, uint32_t B_LEAF, std::vector<be_node*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
 
 			this->rank_ = rank;
 			this->parent = P;
@@ -123,7 +122,7 @@ namespace dyn {
 		 * create new node given some children (leaves),the parent, && the rank of this
 		 * node among its siblings
 		 */
-		explicit be_node(uint32_t B, uint32_t B_LEAF, vector<leaf_type*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
+		explicit be_node(uint32_t B, uint32_t B_LEAF, std::vector<leaf_type*>& c, int64_t message_count, be_node* P = NULL, uint32_t rank = 0) {
 
 			this->rank_ = rank;
 			this->parent = P;
@@ -1138,13 +1137,13 @@ namespace dyn {
 		* in the following 2 vectors, the first nr_subtrees+1 elements refer to the
 		* nr_subtrees subtrees
 		*/
-		vector<uint64_t> subtree_sizes;
-		vector<uint64_t> subtree_psums;
+		std::vector<uint64_t> subtree_sizes;
+		std::vector<uint64_t> subtree_psums;
 
-		vector<message> message_buffer;
+		std::vector<message> message_buffer;
 
-		vector<be_node*> children;
-		vector<leaf_type*> leaves;
+		std::vector<be_node*> children;
+		std::vector<leaf_type*> leaves;
 
 		be_node* parent = NULL; 		//NULL for root
 		uint32_t rank_ = 0; 		//rank of this node among its siblings
