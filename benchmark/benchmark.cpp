@@ -1,15 +1,16 @@
 #include "benchmark.h"
 #include <iostream>
 #include "packed_vector.hpp"
-#include "be-bv.hpp"
 #include "b-bv.hpp"
-#include "sdsl-bv.hpp"
 #include "test-case.hpp"
+#include "b-node.hpp"
+#include "be-node.hpp"
+#include "int_vector.hpp"
+#include "rank_support_v5.hpp"
+#include "util.hpp"
 
-typedef b_bv<packed_vector> bbv;
-typedef be_bv<packed_vector> bebv;
-typedef sdsl_bv sdslbv;
-
+typedef b_bv<packed_vector, b_node> bbv;
+typedef b_bv<packed_vector, be_node> bebv;
 
 static int const no_value = 0;
 
@@ -59,7 +60,7 @@ static void sdsl_tree(benchmark::internal::Benchmark* benchmark) {
 }
 
 static void rank_build(benchmark::State& state) {
-	bit_vector bv(state.range(0));
+	sdsl::bit_vector bv(state.range(0));
 
 	for (int i = 0; i < bv.size(); ++i)
 	{
@@ -73,14 +74,14 @@ static void rank_build(benchmark::State& state) {
 		}
 	}
 
-	rank_support_v5<1, 1> rs;
+	sdsl::rank_support_v5<1, 1> rs;
 
 	for (auto _ : state) {
-		util::init_support(rs, &bv);
+		sdsl::util::init_support(rs, &bv);
 	}
 }
 
-BENCHMARK(rank_build)->Range(1024, 33554432);
+//BENCHMARK(rank_build)->Range(1024, 33554432);
 
 static void rank_performance(benchmark::State& state) {
 	sdsl::bit_vector bv(state.range(0));
@@ -97,9 +98,9 @@ static void rank_performance(benchmark::State& state) {
 		}
 	}
 
-	rank_support_v5<1, 1> rs;
+	sdsl::rank_support_v5<1, 1> rs;
 
-	util::init_support(rs, &bv);
+	sdsl::util::init_support(rs, &bv);
 
 	vector<int> randoms;
 	const auto max = bv.size();
@@ -117,7 +118,7 @@ static void rank_performance(benchmark::State& state) {
 	}
 }
 
-BENCHMARK(rank_performance)->Ranges({ {1024, 33554432}, {1024, 33554432} });
+//BENCHMARK(rank_performance)->Ranges({ {1024, 33554432}, {1024, 33554432} });
 
 template <class T> static void Query(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));

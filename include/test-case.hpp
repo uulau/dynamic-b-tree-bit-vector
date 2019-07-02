@@ -5,7 +5,6 @@
 #include "message.hpp"
 #include <vector>
 #include <string>
-#include "succinct_bitvector.hpp"
 
 using namespace std;
 using namespace dyn;
@@ -86,7 +85,7 @@ const vector<message> generate_ram_test(uint64_t operations, int ratio) {
 		}
 		else {
 			const auto position = rand() % (insert_counter);
-			messages.push_back(query_message(position));
+			messages.push_back(rank_message(position + 1));
 		}
 	}
 	return messages;
@@ -105,6 +104,12 @@ template<class K> void execute_test(const vector<message>& messages, K& tree) {
 		}
 		else if (message.type == message_type::update) {
 			tree.set(message.index, message.value);
+		}
+		else if (message.type == message_type::select) {
+			tree.select(message.index, message.value);
+		}
+		else if (message.type == message_type::rank) {
+			tree.rank(message.index, message.value);
 		}
 		else {
 			throw "Invalid message type.";

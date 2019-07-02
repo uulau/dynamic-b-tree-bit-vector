@@ -1,13 +1,13 @@
 #include "gtest.h"
 #include "helpers.hpp"
 #include "b-bv.hpp"
-#include "be-bv.hpp"
-#include "sdsl-bv.hpp"
 #include "packed_vector.hpp"
+#include "be-node.hpp"
+#include "b-node.hpp"
 
-typedef b_bv<packed_vector> bbv;
-typedef be_bv<packed_vector> bebv;
-typedef sdsl_bv sdslbv;
+typedef b_bv<packed_vector, b_node> bbv;
+typedef b_bv<packed_vector, be_node> bebv;
+typedef b_bv<packed_vector, be_node> sdslbv;
 
 TEST(BEBV, Insertion10) {
 	insert_test<bebv>(10);

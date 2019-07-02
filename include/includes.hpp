@@ -16,12 +16,6 @@
 #include <cmath>
 #include <algorithm>
 
-#define WORD_SIZE 64;
+static constexpr uint64_t WORD_SIZE{ 64 };
 
 using namespace std;
-
-typedef unsigned char uchar;
-typedef uint64_t ulint;
-
-typedef unsigned char symbol;
-typedef pair<uint64_t, uint64_t> range_t;

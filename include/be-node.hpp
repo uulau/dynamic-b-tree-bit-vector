@@ -1,3 +1,5 @@
+#pragma once
+
 #include "includes.hpp"
 #include "message.hpp"
 
@@ -347,10 +349,14 @@ namespace dyn {
 
 		}
 
+		void increment(uint64_t i, bool delta) {
+			create_message(update_message(i, delta));
+		}
+
 		/*
 		 * increment || decrement i-th integer by delta
 		 */
-		void increment(uint64_t i, bool delta) {
+		void increment_item(uint64_t i, bool delta) {
 			assert(i < size());
 
 			uint32_t j = subtree_size_bound<true>(i);
@@ -431,6 +437,10 @@ namespace dyn {
 			return parent;
 		}
 
+		be_node* insert(const uint64_t i, bool x) {
+			return create_message(insert_message(i, x));
+		}
+
 		/*
 		 * insert integer x at position i.
 		 * If this node is the root, return the new root.
@@ -439,7 +449,7 @@ namespace dyn {
 		 * is full && is splitted
 		 *
 		 */
-		be_node* insert(const uint64_t i, bool x) {
+		be_node* insert_item(const uint64_t i, bool x) {
 			assert(i <= size());
 			assert(is_root() || !parent->is_full());
 
@@ -516,6 +526,10 @@ namespace dyn {
 
 		}
 
+		be_node* remove(uint64_t i) {
+			return create_message(remove_message(i));
+		}
+
 		/*
 		 * remove the integer at position i.
 		 * If the root changes, return the new root.
@@ -524,7 +538,7 @@ namespace dyn {
 		 * has only one non-leaf child.
 		 *
 		 */
-		be_node* remove(uint64_t i) {
+		be_node* remove_item(uint64_t i) {
 			assert(i < size_no_messages());
 			//assert(is_root() || parent->can_lose());
 
@@ -682,17 +696,17 @@ namespace dyn {
 			{
 			case message_type::insert:
 			{
-				new_root = insert(m.index, m.value);
+				new_root = insert_item(m.index, m.value);
 				break;
 			}
 			case message_type::remove:
 			{
-				new_root = remove(m.index);
+				new_root = remove_item(m.index);
 				break;
 			}
 			case message_type::update:
 			{
-				increment(m.index, m.value);
+				increment_item(m.index, m.value);
 				break;
 			}
 			default: throw;
@@ -1050,7 +1064,7 @@ namespace dyn {
 
 				vector<leaf_type*> right_children_l(nr_children - nr_children / 2);
 
-				ulint k = 0;
+				uint64_t k = 0;
 
 				for (uint32_t i = nr_children / 2; i < nr_children; ++i) {
 					right_children_l[k++] = leaves[i];
@@ -1066,7 +1080,7 @@ namespace dyn {
 
 				vector<be_node*> right_children_n(nr_children - nr_children / 2);
 
-				ulint k = 0;
+				uint64_t k = 0;
 
 				for (uint32_t i = nr_children / 2; i < nr_children; ++i) {
 					right_children_n[k++] = children[i];

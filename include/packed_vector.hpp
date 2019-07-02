@@ -393,7 +393,7 @@ namespace dyn {
 		 */
 		uint64_t bit_size() const
 		{
-			return (sizeof(packed_vector) + words.capacity() * sizeof(ulint)) * 8;
+			return (sizeof(packed_vector) + words.capacity() * sizeof(uint64_t)) * 8;
 		}
 
 		uint64_t width() const {

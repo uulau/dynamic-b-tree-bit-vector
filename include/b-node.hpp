@@ -709,7 +709,7 @@ namespace dyn {
 			return nr_children;
 		}
 
-		ulint serialize(ostream& out) const {
+		uint64_t serialize(ostream& out) const {
 
 			ulint w_bytes = 0;
 			ulint subtree_sizes_len = subtree_sizes.size();
@@ -1090,7 +1090,7 @@ namespace dyn {
 
 				vector<leaf_type*> right_children_l(nr_children - nr_children / 2);
 
-				ulint k = 0;
+				uint64_t k = 0;
 
 				for (uint32_t i = nr_children / 2; i < nr_children; ++i)
 					right_children_l[k++] = leaves[i];
@@ -1105,7 +1105,7 @@ namespace dyn {
 
 				vector<b_node*> right_children_n(nr_children - nr_children / 2);
 
-				ulint k = 0;
+				uint64_t k = 0;
 
 				for (uint32_t i = nr_children / 2; i < nr_children; ++i)
 					right_children_n[k++] = children[i];
