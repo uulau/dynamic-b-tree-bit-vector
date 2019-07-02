@@ -32,16 +32,23 @@ namespace dyn {
 			this->size_ = size;
 			this->psum_ = 0;
 
-			words = vector<uint64_t>();
-			if (size_ != 0) {
-				words.reserve(fast_div(size_) + (fast_mod(size_) != 0));
-			}
+			words = vector<uint64_t>(fast_div(size_) + (fast_mod(size_) != 0));
+
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 		}
 
 		explicit packed_vector(vector<uint64_t>&& _words, uint64_t const new_size) {
 			this->words = _words;
 			this->size_ = new_size;
 			this->psum_ = psum(size_ - 1);
+
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 		}
 
 		~packed_vector() = default;
@@ -57,6 +64,8 @@ namespace dyn {
 		}
 
 		bool at(uint64_t const i) const {
+			assert(i < size_);
+
 			return MASK & (words[fast_div(i)] >> fast_mod(i));
 		}
 
@@ -250,22 +259,29 @@ namespace dyn {
 		}
 
 		void remove(uint64_t i) {
+			auto x = this->at(i);
 			//shift ints left, from position i + 1 onwords
 			shift_left(i);
 
-			while (fast_mul(words.size() - extra_ - 1) >= size_ - 1) {
-				//more than extra_ extra words, delete
-				if (words.size() < extra_) {
-					break;
-				}
+			--size_;
+			psum_ -= x;
+
+			while (words.size() > size_ / int_per_word_ + extra_) {
 				words.pop_back();
 			}
 
-			--size_;
-			psum_--;
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 		}
 
 		void insert(uint64_t i, uint64_t x) {
+			if (i == size()) {
+				push_back(x);
+				return;
+			}
+
 			if (size_ + 1 > fast_mul(words.size())) {
 				words.resize(words.size() + extra_, 0);
 			}
@@ -278,6 +294,11 @@ namespace dyn {
 
 			psum_ += x;
 			++size_;
+
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 		}
 
 		/*
@@ -286,18 +307,28 @@ namespace dyn {
 		 * rebuild of the whole vector!
 		 */
 		void push_back(bool x) {
+			assert(int_per_word_ == 64);
+			assert(size_ <= words.size() * 64);
 
 			//not enough space for the new element:
 			//push back a new word
-			if (size_ + 1 > (fast_mul(words.size()))) {
+			if (fast_div(size_++) == words.size()) {
 				words.push_back(0);
 			}
 
-			//insert x
-			set<false>(size(), x);
+			assert(size_ <= words.size() * 64);
+			assert(!at(size_ - 1));
 
-			psum_++;
-			size_++;
+			if (x) {
+				//insert x at the last position
+				words[fast_div(size_ - 1)] |= static_cast<uint64_t>(1) << fast_mod(size_ - 1);
+				psum_++;
+			}
+
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 		}
 
 		uint64_t size() const
@@ -311,26 +342,36 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-			const auto tot_words = fast_div(size_) + (fast_mod(size_) != 0);
+			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
 
-			const auto nr_left_words = tot_words >> 1;
+			uint64_t nr_left_words = tot_words >> 1;
 
 			assert(nr_left_words > 0);
+			assert(tot_words - nr_left_words > 0);
 
-			const auto nr_left_ints = fast_mul(nr_left_words);
+			uint64_t nr_left_ints = fast_mul(nr_left_words);
 
 			assert(size_ > nr_left_ints);
-			const auto nr_right_ints = size_ - nr_left_ints;
+			uint64_t nr_right_ints = size_ - nr_left_ints;
 
-			auto right_words = vector<uint64_t>(words.begin() + nr_left_words, words.begin() + tot_words);
-			words = vector<uint64_t>(words.begin(), words.begin() + nr_left_words + extra_);
+			assert(words.begin() + nr_left_words + extra_ < words.end());
+			vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
+			std::copy(&words[nr_left_words], &words[tot_words], right_words.begin());
+			words.resize(nr_left_words + extra_);
+			std::fill(words.begin() + nr_left_words, words.end(), 0);
+			words.shrink_to_fit();
 
 			size_ = nr_left_ints;
 			psum_ = psum(size_ - 1);
 
-			const auto right = new packed_vector(std::move(right_words), nr_right_ints);
+			auto right = new packed_vector(std::move(right_words), nr_right_ints);
+
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 
 			return right;
 		}
@@ -344,12 +385,7 @@ namespace dyn {
 			const auto word_nr = fast_div(i);
 			const uint8_t pos = fast_mod(i);
 
-			if (x) {
-				words[word_nr] |= (MASK << pos);
-			}
-			else {
-				words[word_nr] &= ~(MASK << pos);
-			}
+			words[word_nr] ^= (-(uint64_t)x ^ words[word_nr]) & (MASK << pos);
 		}
 
 		/*
@@ -369,43 +405,48 @@ namespace dyn {
 		//from the i-th.
 		//assumption: last element does not overflow!
 		void shift_right(uint64_t i) {
-
+			assert(i < size_);
 			//number of integers that fit in a memory word
 			assert(int_per_word_ > 0);
+			assert(size_ + 1 <= fast_mul(words.size()));
 
-			assert(size_ + 1 <= words.size() * int_per_word_);
-
-			// Divide by 64 (and truncate)
 			uint64_t current_word = fast_div(i);
 
-			uint64_t falling_out_idx = fast_mul(current_word) + (int_per_word_ - 1);
-
 			//integer that falls out from the right of current word
-			bool falling_out = at(falling_out_idx);
+			uint64_t falling_out = 0;
 
-			for (uint64_t j = falling_out_idx; j > i; --j) {
-				set<false>(j, at(j - 1));
+			if (fast_mul(current_word) < i) {
+				falling_out = (words[current_word] >> (int_per_word_ - 1));
+
+				uint64_t falling_out_idx = std::min(fast_mul(current_word) + (int_per_word_ - 1), size_);
+
+				for (uint64_t j = falling_out_idx; j > i; --j) {
+					assert(j - 1 < size_);
+					set<false>(j, at(j - 1));
+				}
+
+				current_word++;
 			}
 
 			//now for the remaining integers we can work blockwise
 
 			uint64_t falling_out_temp;
 
-			for (uint64_t j = current_word + 1; j < words.size(); ++j) {
-				auto val = fast_mul(j);
+			auto val = fast_div(size_);
+			for (uint64_t j = current_word; j <= val; ++j) {
 
-				falling_out_temp = at(val + (int_per_word_ - 1));
+				assert(j < words.size());
 
-				words[j] = words[j] << width_;
+				falling_out_temp = (words[j] >> (int_per_word_ - 1));
 
-				assert(at(j * int_per_word_) == 0);
+				words[j] <<= width_;
 
-				set<false>(val, falling_out);
+				assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
+
+				set<false>(fast_mul(j), falling_out);
 
 				falling_out = falling_out_temp;
-
 			}
-
 		}
 
 		//shift left of 1 position elements starting
