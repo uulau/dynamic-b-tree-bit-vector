@@ -331,36 +331,26 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
+			const auto tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
 
-			uint64_t nr_left_words = tot_words >> 1;
+			const auto nr_left_words = tot_words >> 1;
 
 			assert(nr_left_words > 0);
-			assert(tot_words - nr_left_words > 0);
 
-			uint64_t nr_left_ints = fast_mul(nr_left_words);
+			const auto nr_left_ints = fast_mul(nr_left_words);
 
 			assert(size_ > nr_left_ints);
-			uint64_t nr_right_ints = size_ - nr_left_ints;
+			const auto nr_right_ints = size_ - nr_left_ints;
 
-			assert(words.begin() + nr_left_words + extra_ < words.end());
-			std::vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
-			std::copy(&words[nr_left_words], &words[tot_words], right_words.begin());
-			words.resize(nr_left_words + extra_);
-			std::fill(words.begin() + nr_left_words, words.end(), 0);
-			words.shrink_to_fit();
+			auto right_words = std::vector<uint64_t>(words.begin() + nr_left_words, words.begin() + tot_words);
+			words = std::vector<uint64_t>(words.begin(), words.begin() + nr_left_words + extra_);
 
 			size_ = nr_left_ints;
 			psum_ = psum(size_ - 1);
 
-			auto right = new packed_vector(std::move(right_words), nr_right_ints);
-
-			assert(size_ / int_per_word_ <= words.size());
-			assert((size_ / int_per_word_ == words.size()
-				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
-				&& "uninitialized non-zero values in the end of the vector");
+			const auto right = new packed_vector(std::move(right_words), nr_right_ints);
 
 			return right;
 		}

@@ -517,7 +517,7 @@ namespace dyn {
 
 				//check for under/overflows
 				assert(delta or (subtree_psums[k] <= (~uint64_t(0)) - delta));
-				assert((not delta) or (delta <= subtree_psums[k]));
+				//assert((not delta) or (delta <= subtree_psums[k]));
 
 				subtree_psums[k] = (delta ? subtree_psums[k] + delta : subtree_psums[k] - delta);
 
