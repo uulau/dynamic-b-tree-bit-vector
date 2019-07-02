@@ -722,10 +722,6 @@ namespace dyn {
 					? subtree_size_bound<false>(message.index)
 					: subtree_size_bound<true>(message.index);
 
-				if (subtree_sizes[j] == message.index && message.type == message_type::update) {
-					j++;
-				}
-
 				auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
 				auto i = message.index - previous_size;

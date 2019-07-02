@@ -64,7 +64,7 @@ namespace dyn {
 
 			leaves = vector<leaf_type*>(1);
 			leaves[0] = new leaf_type();
-
+			std::ignore = message_size;
 		}
 
 		/*
@@ -74,7 +74,7 @@ namespace dyn {
 		explicit b_node(uint32_t B, uint32_t B_LEAF, vector<b_node*>& c, b_node* P = NULL, uint32_t rank = 0) {
 			this->B = B;
 			this->B_LEAF = B_LEAF;
-			
+
 			this->rank_ = rank;
 			this->parent = P;
 
