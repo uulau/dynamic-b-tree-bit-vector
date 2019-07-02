@@ -4,8 +4,6 @@
 
 #pragma once
 
-#include "bv_reference.hpp"
-
 namespace dyn {
 	template
 		<
@@ -14,8 +12,6 @@ namespace dyn {
 		>
 		class b_bv {
 		public:
-			using bv_ref = bv_reference<b_bv>;
-
 			b_bv() = delete;
 
 			explicit b_bv(const b_bv& sp) {
@@ -44,10 +40,6 @@ namespace dyn {
 				delete root;
 
 				root = new node_type(*sp.root);
-			}
-
-			bv_ref operator[](uint64_t i) {
-				return { *this, i };
 			}
 
 			uint64_t select(uint64_t i, bool b = true) const {

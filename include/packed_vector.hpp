@@ -8,13 +8,10 @@
 #include <cassert>
 #include <algorithm>
 #include <vector>
-#include "pv_reference.hpp"
 
 namespace dyn {
 	class packed_vector {
 	public:
-		using pv_ref = pv_reference<packed_vector>;
-
 		static uint64_t fast_mod(uint64_t const num)
 		{
 			return num & 63;
@@ -54,16 +51,6 @@ namespace dyn {
 		}
 
 		~packed_vector() = default;
-
-		/*
-		 * high-level access to the vector. Supports assign, access,
-		 * increment (++, +=), decrement (--, -=)
-		 */
-		pv_ref operator[](uint64_t const i) {
-
-			return { *this, i };
-
-		}
 
 		bool at(uint64_t const i) const {
 			assert(i < size_);
@@ -489,12 +476,8 @@ namespace dyn {
 
 		uint64_t sum(packed_vector& vec) const {
 			uint64_t res = 0;
-
 			for (uint64_t i = 0; i < vec.size(); ++i) {
-
-				auto x = vec[i];
-				res += x;
-
+				res += vec.at(i);
 			}
 			return res;
 		}
