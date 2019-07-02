@@ -8,7 +8,7 @@ using namespace dyn;
 
 int main()
 {
-	auto const count = 10000000;
+	auto const count = 100000000;
 
 	auto tree = new be_bv<packed_vector>(uint32_t(8), uint32_t(4096), uint64_t(256));
 

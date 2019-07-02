@@ -11,66 +11,63 @@
 namespace dyn {
 	class packed_vector {
 	public:
+		using pv_ref = pv_reference<packed_vector>;
 
-		static uint64_t fast_mod(const uint64_t num)
+		static uint64_t fast_mod(uint64_t const num)
 		{
-			return num & (63);
+			return num & 63;
 		}
 
-		static uint64_t fast_div(const uint64_t num)
+		static uint64_t fast_div(uint64_t const num)
 		{
 			return num >> 6;
 		}
 
-		static uint64_t fast_mul(const uint64_t num)
+		static uint64_t fast_mul(uint64_t const num)
 		{
 			return num << 6;
 		}
 
-		using pv_ref = pv_reference<packed_vector>;
+		explicit packed_vector(uint64_t const size = 0) {
+			this->size_ = size;
+			this->psum_ = 0;
 
-		explicit packed_vector(const uint64_t size = 0) {
-			size_ = size;
-			psum_ = 0;
-
-			if (size_ == 0) {
-				words = vector<uint64_t>();
-			}
-			else {
-				words = vector<uint64_t>(fast_div(size_) + (fast_mod(size_) != 0));
+			words = vector<uint64_t>();
+			if (size_ != 0) {
+				words.reserve(fast_div(size_) + (fast_mod(size_) != 0));
 			}
 		}
 
-		explicit packed_vector(vector<uint64_t>&& _words, const uint64_t new_size) {
+		explicit packed_vector(vector<uint64_t>&& _words, uint64_t const new_size) {
 			this->words = _words;
 			this->size_ = new_size;
-			psum_ = psum(size_ - 1);
+			this->psum_ = psum(size_ - 1);
 		}
 
-		virtual ~packed_vector() {}
+		~packed_vector() = default;
 
 		/*
 		 * high-level access to the vector. Supports assign, access,
 		 * increment (++, +=), decrement (--, -=)
 		 */
-		pv_ref operator[](uint64_t i) {
+		pv_ref operator[](uint64_t const i) {
 
 			return { *this, i };
 
 		}
 
-		bool at(uint64_t i) {
+		bool at(uint64_t const i) const {
 			return MASK & (words[fast_div(i)] >> fast_mod(i));
 		}
 
-		uint64_t psum() {
+		uint64_t psum() const {
 			return psum_;
 		}
 
 		/*
 		 * inclusive partial sum (i.e. up to element i included)
 		 */
-		uint64_t psum(uint64_t i) {
+		uint64_t psum(uint64_t i) const {
 
 			assert(i < size_);
 
@@ -79,7 +76,8 @@ namespace dyn {
 			uint64_t s = 0;
 			uint64_t pos = 0;
 
-			for (uint64_t j = 0; j < (fast_div(i)); ++j) {
+			auto const max = fast_div(i);
+			for (uint64_t j = 0; j < max; ++j) {
 				s += __builtin_popcountll(words[j]);
 				pos += 64;
 			}
@@ -95,7 +93,7 @@ namespace dyn {
 		/*
 		 * smallest index j such that psum(j)>=x
 		 */
-		uint64_t search(uint64_t x) {
+		uint64_t search(uint64_t x) const {
 
 			assert(size_ > 0);
 			assert(x <= psum_);
@@ -107,11 +105,9 @@ namespace dyn {
 			// optimization for bitvectors
 
 			for (uint64_t j = 0; j < fast_div(size_) && s < x; ++j) {
-
 				pop = __builtin_popcountll(words[j]);
 				pos += 64;
 				s += pop;
-
 			}
 
 			// end optimization for bitvectors
@@ -134,7 +130,7 @@ namespace dyn {
 		 * position i such that the number of zeros before
 		 * i (included) is == x
 		 */
-		uint64_t search_0(uint64_t x) {
+		uint64_t search_0(uint64_t x) const {
 
 			assert(size_ > 0);
 			assert(width_ == 1);
@@ -169,7 +165,7 @@ namespace dyn {
 		/*
 		 * smallest index j such that psum(j)+j>=x
 		 */
-		uint64_t search_r(uint64_t x) {
+		uint64_t search_r(uint64_t x) const {
 
 			assert(size_ > 0);
 			assert(x <= psum_ + size_);
@@ -204,7 +200,7 @@ namespace dyn {
 		/*
 		 * true iif x is one of the partial sums  0, I_0, I_0+I_1, ...
 		 */
-		bool contains(uint64_t x) {
+		bool contains(uint64_t x) const {
 
 			assert(size_ > 0);
 			assert(x <= psum_);
@@ -224,7 +220,7 @@ namespace dyn {
 		/*
 		 * true iif x is one of  0, I_0+1, I_0+I_1+2, ...
 		 */
-		bool contains_r(uint64_t x) {
+		bool contains_r(uint64_t x) const {
 
 			assert(size_ > 0);
 			assert(x <= psum_ + size_);
@@ -270,20 +266,8 @@ namespace dyn {
 		}
 
 		void insert(uint64_t i, uint64_t x) {
-
-			//not enough space for the new element:
-			//alloc extra_ new words
 			if (size_ + 1 > fast_mul(words.size())) {
-
-				//resize words
-				auto temp = vector<uint64_t>(words.size() + extra_, 0);
-
-				uint64_t j = 0;
-				for (auto t : words) {
-					temp[j++] = t;
-				}
-
-				words = vector<uint64_t>(temp);
+				words.resize(words.size() + extra_, 0);
 			}
 
 			//shift right elements starting from number i
@@ -295,8 +279,6 @@ namespace dyn {
 			psum_ += x;
 			++size_;
 		}
-
-
 
 		/*
 		 * efficient push-back, implemented with a push-back on the underlying container
@@ -348,7 +330,7 @@ namespace dyn {
 			size_ = nr_left_ints;
 			psum_ = psum(size_ - 1);
 
-			const auto right = new packed_vector(right_words, nr_right_ints);
+			const auto right = new packed_vector(std::move(right_words), nr_right_ints);
 
 			return right;
 		}
@@ -373,12 +355,12 @@ namespace dyn {
 		/*
 		 * return total number of bits occupied in memory by this object instance
 		 */
-		ulint bit_size() const
+		uint64_t bit_size() const
 		{
 			return (sizeof(packed_vector) + words.capacity() * sizeof(ulint)) * 8;
 		}
 
-		static uint64_t width() {
+		uint64_t width() const {
 			return width_;
 		}
 
@@ -462,10 +444,10 @@ namespace dyn {
 
 		}
 
-		uint64_t sum(packed_vector& vec) {
+		uint64_t sum(packed_vector& vec) const {
 			uint64_t res = 0;
 
-			for (ulint i = 0; i < vec.size(); ++i) {
+			for (uint64_t i = 0; i < vec.size(); ++i) {
 
 				auto x = vec[i];
 				res += x;
