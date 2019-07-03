@@ -188,32 +188,31 @@ namespace dyn {
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		bool at(uint64_t const i, int64_t message_count = 0, int64_t increment = 0) {
+		bool at(uint64_t const i, bool updated = false, bool val = false) {
 			for (const auto& message : message_buffer) {
-
 				if (message.index == i) {
-					if (message.type == message_type::insert) {
-						return message.value;
-					}
-
-					if (message.type == message_type::update) {
-						!message.value ? increment++ : increment--;
+					if (message.type != message_type::remove) {
+						updated = true;
+						val = message.value;
 						continue;
+					}
+					else {
+						return at(i + 1, false, false);
 					}
 				}
 
-				if (message.index <= i) {
+				if (message.index < i) {
 					if (message.type == message_type::insert) {
-						message_count--;
+						return at(i - 1, false, false);
 					}
 					else if (message.type == message_type::remove) {
-						message_count++;
+						return at(i + 1, false, false);
 					}
 				}
 			}
 
-			if (has_leaves() && message_count != 0) {
-				return at(i + message_count, 0, increment);
+			if (has_leaves() && updated) {
+				return val;
 			}
 
 			assert(i < size());
@@ -225,20 +224,16 @@ namespace dyn {
 			assert(i >= previous_size);
 
 			if (has_leaves()) {
-
 				assert(j < leaves.size());
 				assert(j < nr_children);
 				assert(leaves[j] != NULL);
 				assert(i - previous_size < leaves[j]->size());
 
-				return leaves[j]->at(i - previous_size) + increment;
-
+				return leaves[j]->at(i - previous_size);
 			}
 
 			//else: recurse on children
-
-			return children[j]->at(i - previous_size, message_count, increment);
-
+			return children[j]->at(i - previous_size, updated, val);
 		}
 
 		/*
