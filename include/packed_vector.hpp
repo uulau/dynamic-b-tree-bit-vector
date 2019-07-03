@@ -82,7 +82,7 @@ namespace dyn {
 
 			auto const mod = fast_mod(i);
 			if (mod) {
-				s += __builtin_popcountll(words[fast_div(i)] & ((uint64_t(1) << mod) - 1));
+				s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
 			}
 
 			return s;
@@ -102,7 +102,8 @@ namespace dyn {
 
 			// optimization for bitvectors
 
-			for (uint64_t j = 0; j < fast_div(size_) && s < x; ++j) {
+			auto div = fast_div(size_);
+			for (uint64_t j = 0; j < div && s < x; ++j) {
 				pop = __builtin_popcountll(words[j]);
 				pos += 64;
 				s += pop;
@@ -138,25 +139,21 @@ namespace dyn {
 			uint64_t pop = 0;
 			uint64_t pos = 0;
 
-			for (uint64_t j = 0; j < fast_div(size_) && s < x; ++j) {
-
+			auto div = fast_div(size_);
+			for (uint64_t j = 0; j < div && s < x; ++j) {
 				pop = 64 - __builtin_popcountll(words[j]);
 				pos += 64;
 				s += pop;
-
 			}
 
 			pos -= fast_mul(pos > 0);
 			s -= pop;
 
 			for (; pos < size_ && s < x; ++pos) {
-
 				s += (1 - at(pos));
-
 			}
 
 			pos -= pos != 0;
-
 			return pos;
 		}
 
@@ -172,12 +169,11 @@ namespace dyn {
 			uint64_t pop = 0;
 			uint64_t pos = 0;
 
-			for (uint64_t j = 0; j < fast_div(size_) && s < x; ++j) {
-
+			auto div = fast_div(size_);
+			for (uint64_t j = 0; j < div && s < x; ++j) {
 				pop = 64 + __builtin_popcountll(words[j]);
 				pos += 64;
 				s += pop;
-
 			}
 
 			pos -= fast_mul(pos > 0);
@@ -190,9 +186,7 @@ namespace dyn {
 			}
 
 			pos -= pos != 0;
-
 			return pos;
-
 		}
 
 		/*
@@ -206,13 +200,10 @@ namespace dyn {
 			uint64_t s = 0;
 
 			for (uint64_t j = 0; j < size_ && s < x; ++j) {
-
 				s += at(j);
-
 			}
 
 			return s == x;
-
 		}
 
 		/*
@@ -226,13 +217,10 @@ namespace dyn {
 			uint64_t s = 0;
 
 			for (uint64_t j = 0; j < size_ && s < x; ++j) {
-
 				s += (at(j) + 1);
-
 			}
 
 			return s == x;
-
 		}
 
 		void increment(uint64_t i, bool val) {
@@ -248,6 +236,7 @@ namespace dyn {
 		}
 
 		void remove(uint64_t i) {
+			assert(i < size_);
 			auto x = this->at(i);
 			//shift ints left, from position i + 1 onwords
 			shift_left(i);
@@ -255,7 +244,8 @@ namespace dyn {
 			--size_;
 			psum_ -= x;
 
-			while (words.size() > size_ / int_per_word_ + extra_) {
+			auto div = fast_div(size_);
+			while (words.size() > div + extra_) {
 				words.pop_back();
 			}
 
@@ -331,26 +321,36 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-			const auto tot_words = fast_div(size_) + (fast_mod(size_) != 0);
+			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
 
-			const auto nr_left_words = tot_words >> 1;
+			uint64_t nr_left_words = tot_words >> 1;
 
 			assert(nr_left_words > 0);
+			assert(tot_words - nr_left_words > 0);
 
-			const auto nr_left_ints = fast_mul(nr_left_words);
+			uint64_t nr_left_ints = fast_mul(nr_left_words);
 
 			assert(size_ > nr_left_ints);
-			const auto nr_right_ints = size_ - nr_left_ints;
+			uint64_t nr_right_ints = size_ - nr_left_ints;
 
-			auto right_words = std::vector<uint64_t>(words.begin() + nr_left_words, words.begin() + tot_words);
-			words = std::vector<uint64_t>(words.begin(), words.begin() + nr_left_words + extra_);
+			assert(words.begin() + nr_left_words + extra_ < words.end());
+			std::vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
+			std::copy(&words[nr_left_words], &words[tot_words], right_words.begin());
+			words.resize(nr_left_words + extra_);
+			std::fill(words.begin() + nr_left_words, words.end(), 0);
+			words.shrink_to_fit();
 
 			size_ = nr_left_ints;
 			psum_ = psum(size_ - 1);
 
-			const auto right = new packed_vector(std::move(right_words), nr_right_ints);
+			auto right = new packed_vector(std::move(right_words), nr_right_ints);
+
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 
 			return right;
 		}
@@ -434,32 +434,39 @@ namespace dyn {
 
 			//number of integers that fit in a memory word
 			assert(int_per_word_ > 0);
+			assert(i < size_);
 
-			if (i == 0) {
-				set<false>(i, false);
+			if (i == (size_ - 1)) {
+				set<false>(i, 0);
 				return;
 			}
 
-			// Divide by 64
-			auto current_word = fast_div(i);
+			uint64_t current_word = fast_div(i);
 
 			//integer that falls in from the right of current word
-			auto falling_in_idx = std::min(fast_mul(current_word + 1), size_ - 1);
+			uint64_t falling_in_idx;
 
-			for (auto j = i; j <= falling_in_idx - 1; ++j) {
-				set<false>(j, at(j + 1));
+			if (fast_mul(current_word) < i) {
+				falling_in_idx = std::min(fast_mul(current_word + 1), size_ - 1);
+
+				for (uint64_t j = i; j < falling_in_idx; ++j) {
+					assert(j + 1 < size_);
+					set<false>(j, at(j + 1));
+				}
+
+				if (falling_in_idx == size_ - 1) {
+					set<false>(size_ - 1, 0);
+				}
+				current_word++;
 			}
 
 			//now for the remaining integers we can work blockwise
-			for (uint64_t j = current_word + 1; j < words.size(); ++j) {
-				words[j] = words[j] >> width_;
+			for (uint64_t j = current_word; fast_mul(j) < size_; ++j) {
+				words[j] >>= width_;
 
-				if (j < words.size() - 1) {
-					const uint64_t falling_in = at(fast_mul(j + 1));
+				falling_in_idx = fast_mul(j + 1) < size_ ? at(fast_mul(j + 1)) : 0;
 
-					set<false>(fast_mul(j) + int_per_word_ - 1, falling_in);
-				}
-
+				set<false>(fast_mul(j) + int_per_word_ - 1, falling_in_idx);
 			}
 
 		}

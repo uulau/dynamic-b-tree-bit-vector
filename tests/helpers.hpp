@@ -78,7 +78,7 @@ template <class T> void remove_test(uint64_t size) {
 		auto old = tree->at(0);
 		tree->remove(0);
 		auto new_size = tree->size();
-		EXPECT_TRUE(size - 1 == new_size);
+		EXPECT_TRUE(s - 1 == new_size);
 		if (size - 1 != new_size) {
 			break;
 		}
