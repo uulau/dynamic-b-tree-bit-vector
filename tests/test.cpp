@@ -57,29 +57,6 @@ TEST(BEBV, Rank1000000) {
 	rank_test<bebv>(1000000);
 }
 
-TEST(BEBV, Size10) {
-	size_test<bebv>(10);
-}
-
-TEST(BEBV, Size100) {
-	size_test<bebv>(100);
-}
-
-TEST(BEBV, Size1000) {
-	size_test<bebv>(1000);
-}
-
-TEST(BEBV, Size10000) {
-	size_test<bebv>(10000);
-}
-
-TEST(BEBV, Size100000) {
-	size_test<bebv>(100000);
-}
-
-TEST(BEBV, Size1000000) {
-	size_test<bebv>(1000000);
-}
 TEST(BEBV, Remove10) {
 	remove_test<bebv>(10);
 }
@@ -200,30 +177,6 @@ TEST(BBV, Rank1000000) {
 	rank_test<bbv>(1000000);
 }
 
-TEST(BBV, Size10) {
-	size_test<bbv>(10);
-}
-
-TEST(BBV, Size100) {
-	size_test<bbv>(100);
-}
-
-TEST(BBV, Size1000) {
-	size_test<bbv>(1000);
-}
-
-TEST(BBV, Size10000) {
-	size_test<bbv>(10000);
-}
-
-TEST(BBV, Size100000) {
-	size_test<bbv>(100000);
-}
-
-TEST(BBV, Size1000000) {
-	size_test<bbv>(1000000);
-}
-
 TEST(BBV, Remove10) {
 	remove_test<bbv>(10);
 }
@@ -342,30 +295,6 @@ TEST(SDSLBV, Rank100000) {
 
 TEST(SDSLBV, Rank1000000) {
 	rank_test<sdslbv>(1000000);
-}
-
-TEST(SDSLBV, Size10) {
-	size_test<sdslbv>(10);
-}
-
-TEST(SDSLBV, Size100) {
-	size_test<sdslbv>(100);
-}
-
-TEST(SDSLBV, Size1000) {
-	size_test<sdslbv>(1000);
-}
-
-TEST(SDSLBV, Size10000) {
-	size_test<sdslbv>(10000);
-}
-
-TEST(SDSLBV, Size100000) {
-	size_test<sdslbv>(100000);
-}
-
-TEST(SDSLBV, Size1000000) {
-	size_test<sdslbv>(1000000);
 }
 
 TEST(SDSLBV, Remove10) {
