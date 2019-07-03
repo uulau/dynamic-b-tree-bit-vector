@@ -400,7 +400,7 @@ namespace dyn {
 		}
 
 		bool is_root() const {
-			return parent == NULL;
+			return parent == nullptr;
 		}
 
 		bool is_full() const
@@ -576,13 +576,13 @@ namespace dyn {
 			i = i - previous_size;
 			assert(i >= 0);
 			remove_leaf_index(i, j);
-			be_node* new_root = NULL;
+			be_node* new_root = nullptr;
 
 			if (!p->has_leaves()) {
 				//if root has only one child, make that child the root
 				if (p->nr_children == 1) {
 					new_root = p->children[0];
-					new_root->parent = NULL;
+					new_root->parent = nullptr;
 				}
 			}
 			return new_root;
@@ -607,24 +607,25 @@ namespace dyn {
 			return subtree_psums[nr_children - 1] + sum_total;
 		}
 
-		be_node* create_message(const message m) {
-			be_node* new_root = NULL;
+		be_node* create_message(const message& m) {
+			be_node* new_root = nullptr;
 
-			if (has_leaves()) {
-				new_root = add_to_leaf(m);
-			}
-			else {
+			if (!has_leaves()) {
 				add_message(m);
 				if (message_buffer_is_full()) {
 					new_root = flush_messages();
 				}
 			}
+			else {
+				new_root = add_to_leaf(m);
+			}
 
-			if (new_root) {
-				new_root->update_counters();
+			if (!new_root) {
+				update_counters<true>();
+
 			}
 			else {
-				update_counters<true>();
+				new_root->update_counters();
 			}
 
 			return new_root;
@@ -689,8 +690,8 @@ namespace dyn {
 			return nr_children;
 		}
 
-		be_node* add_to_leaf(const message m) {
-			be_node* new_root = NULL;
+		be_node* add_to_leaf(const message& m) {
+			be_node* new_root = nullptr;
 			switch (m.type)
 			{
 			case message_type::insert:
@@ -714,7 +715,7 @@ namespace dyn {
 		}
 
 		be_node* flush_messages() {
-			be_node* new_root = NULL;
+			be_node* new_root = nullptr;
 			while (!message_buffer.empty()) {
 				auto message = message_buffer[0];
 
@@ -764,7 +765,7 @@ namespace dyn {
 			}
 		}
 
-		void erase_message(const message m) {
+		void erase_message(const message& m) {
 			switch (m.type) {
 			case message_type::insert: {
 				size_total--;
@@ -1141,7 +1142,7 @@ namespace dyn {
 		std::vector<be_node*> children;
 		std::vector<leaf_type*> leaves;
 
-		be_node* parent = NULL; 		//NULL for root
+		be_node* parent = nullptr; 		//NULL for root
 		uint32_t rank_ = 0; 		//rank of this node among its siblings
 
 		uint32_t nr_children = 0; 	//number of subtrees

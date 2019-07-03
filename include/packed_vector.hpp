@@ -394,10 +394,10 @@ namespace dyn {
 			//integer that falls out from the right of current word
 			uint64_t falling_out = 0;
 
-			if (fast_mul(current_word) < i) {
+			auto val = fast_mul(current_word);
+			if (val < i) {
 				falling_out = (words[current_word] >> (int_per_word_ - 1));
-
-				uint64_t falling_out_idx = std::min(fast_mul(current_word) + (int_per_word_ - 1), size_);
+				uint64_t falling_out_idx = std::min(val + (int_per_word_ - 1), size_);
 
 				for (uint64_t j = falling_out_idx; j > i; --j) {
 					assert(j - 1 < size_);
@@ -411,7 +411,7 @@ namespace dyn {
 
 			uint64_t falling_out_temp;
 
-			auto val = fast_div(size_);
+			val = fast_div(size_);
 			for (uint64_t j = current_word; j <= val; ++j) {
 
 				assert(j < words.size());

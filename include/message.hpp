@@ -6,32 +6,32 @@ namespace dyn {
 	};
 
 	struct message {
-		message_type type;
 		uint64_t index;
+		message_type type;
 		bool value;
 	};
 
-	const message insert_message(uint64_t index, bool value) {
-		return message{ message_type::insert, index, value };
+	static message const insert_message(uint64_t index, bool value) {
+		return message{ index, message_type::insert, value };
 	}
 
-	const message remove_message(uint64_t index) {
-		return message{ message_type::remove, index, 0 };
+	static message const remove_message(uint64_t index) {
+		return message{ index, message_type::remove, 0 };
 	}
 
-	const message query_message(uint64_t index) {
-		return message{ message_type::query, index, 0 };
+	static message const query_message(uint64_t index) {
+		return message{ index, message_type::query, 0 };
 	}
 
-	const message update_message(uint64_t index, bool value) {
-		return message{ message_type::update, index, value };
+	static message const update_message(uint64_t index, bool value) {
+		return message{ index, message_type::update, value };
 	}
 
-	const message rank_message(uint64_t index) {
-		return message{ message_type::rank, index, 0 };
+	static message const rank_message(uint64_t index) {
+		return message{ index, message_type::rank, 0 };
 	}
 
-	const message select_message(uint64_t index) {
-		return message{ message_type::select, index, 0 };
+	static message const select_message(uint64_t index) {
+		return message{ index, message_type::select, 0 };
 	}
 }
