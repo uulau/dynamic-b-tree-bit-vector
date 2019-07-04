@@ -334,6 +334,45 @@ namespace dyn {
 			return subtree_sizes[nr_children - 1] + size_total;
 		}
 
+		uint64_t bit_size() const {
+			uint64_t bs = 8 * sizeof(b_node);
+
+			bs += subtree_sizes.capacity() * sizeof(uint64_t) * 8;
+
+			bs += subtree_psums.capacity() * sizeof(uint64_t) * 8;
+
+			bs += children.capacity() * sizeof(b_node*) * 8;
+
+			bs += leaves.capacity() * sizeof(leaf_type*) * 8;
+
+			bs += message_buffer.size() * sizeof(message) * 8;
+
+			bs += 2 * sizeof(uint64_t) * 8;
+
+			if (has_leaves()) {
+
+				for (ulint i = 0; i < nr_children; ++i) {
+					assert(leaves[i] != NULL);
+					bs += leaves[i]->bit_size();
+
+				}
+
+			}
+			else {
+
+				for (ulint i = 0; i < nr_children; ++i) {
+
+					assert(children[i] != NULL);
+					bs += children[i]->bit_size();
+
+				}
+
+			}
+
+			return bs;
+
+		}
+
 	private:
 		uint32_t B;
 
