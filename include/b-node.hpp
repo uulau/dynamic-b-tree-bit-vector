@@ -185,12 +185,6 @@ namespace dyn {
 
 		}
 
-		bool has_leaves() const {
-
-			return has_leaves_;
-
-		}
-
 		void free_mem() {
 
 			if (has_leaves()) {
@@ -360,42 +354,6 @@ namespace dyn {
 
 		}
 
-		/*
-		 * returns smallest i such that (i+1) + I_0 + ... + I_i >= x
-		 */
-		uint64_t search_r(uint64_t x) {
-
-			assert(x <= psum() + size());
-
-			uint32_t j = 0;
-
-			while (subtree_psums[j] + subtree_sizes[j] < x) {
-
-				j++;
-				assert(j < subtree_psums.size());
-
-			}
-
-			//size/psum stored in previous counter
-			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
-
-			assert(x > previous_psum + previous_size or (x == 0 and (previous_psum + previous_size == 0)));
-
-			//i-th element is in the j-th children
-
-			//if children are leaves, extract psum from j-th leaf
-			if (has_leaves()) {
-
-				return previous_size + leaves[j]->search_r(x - (previous_psum + previous_size));
-
-			}
-
-			//else: recurse on children
-			return previous_size + children[j]->search_r(x - (previous_psum + previous_size));
-
-		}
-
 		bool contains(uint64_t x) {
 
 			if (x == 0) return true;
@@ -430,43 +388,6 @@ namespace dyn {
 
 			//else: recurse on children
 			return children[j]->contains(x - previous_psum);
-
-		}
-
-		bool contains_r(uint64_t x) {
-
-			if (x == 0) return true;
-
-			assert(x <= psum() + size());
-
-			uint32_t j = 0;
-
-			while (subtree_psums[j] + subtree_sizes[j] < x) {
-
-				j++;
-				assert(j < subtree_psums.size());
-
-			}
-
-			if (subtree_psums[j] + subtree_sizes[j] == x) return true;
-
-			//size/psum stored in previous counter
-			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
-
-			assert(x > previous_psum + previous_size or (x + previous_psum + previous_size == 0));
-
-			//i-th element is in the j-th children
-
-			//if children are leaves, extract psum from j-th leaf
-			if (has_leaves()) {
-
-				return leaves[j]->contains_r(x - (previous_psum + previous_size));
-
-			}
-
-			//else: recurse on children
-			return children[j]->contains_r(x - (previous_psum + previous_size));
 
 		}
 
@@ -523,37 +444,6 @@ namespace dyn {
 
 			}
 
-		}
-
-		bool is_root() {
-			return parent == NULL;
-		}
-
-		bool is_full() {
-			assert(nr_children <= 2 * B + 2);
-			return nr_children == (2 * B + 2);
-		}
-
-		/*
-		 * true iff this node can lose
-		 * a child and remain above the min.
-		 * number of children, B + 1
-		 * OR this node is the root
-		 */
-		bool can_lose() {
-			return (nr_children >= (B + 2) || (is_root()));
-		}
-
-		bool leaf_can_lose(leaf_type* leaf) {
-			return (leaf->size() >= (B_LEAF + 1));
-		}
-
-		void increment_rank() {
-			rank_++;
-		}
-
-		b_node* get_parent() {
-			return parent;
 		}
 
 		/*
@@ -620,7 +510,6 @@ namespace dyn {
 
 			//if not root, do not return anything.
 			return new_root;
-
 		}
 
 		/*
@@ -683,21 +572,133 @@ namespace dyn {
 			return new_root;
 		}
 
-
-
-		uint32_t rank() { return rank_; }
-
-		void overwrite_rank(uint32_t r) { rank_ = r; }
-
 		uint64_t size() {
 			assert(nr_children > 0);
 			assert(nr_children - 1 < subtree_sizes.size());
 
 			return subtree_sizes[nr_children - 1];
 		}
+	private:
+		uint32_t B;
+
+		uint32_t B_LEAF;
+
+		uint32_t rank() { return rank_; }
+
+		void overwrite_rank(uint32_t r) { rank_ = r; }
+
+		bool has_leaves() const {
+
+			return has_leaves_;
+
+		}
 
 		uint64_t psum() {
 			return subtree_psums[nr_children - 1];
+		}
+
+		/*
+		* returns smallest i such that (i+1) + I_0 + ... + I_i >= x
+		*/
+		uint64_t search_r(uint64_t x) {
+
+			assert(x <= psum() + size());
+
+			uint32_t j = 0;
+
+			while (subtree_psums[j] + subtree_sizes[j] < x) {
+
+				j++;
+				assert(j < subtree_psums.size());
+
+			}
+
+			//size/psum stored in previous counter
+			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
+
+			assert(x > previous_psum + previous_size or (x == 0 and (previous_psum + previous_size == 0)));
+
+			//i-th element is in the j-th children
+
+			//if children are leaves, extract psum from j-th leaf
+			if (has_leaves()) {
+
+				return previous_size + leaves[j]->search_r(x - (previous_psum + previous_size));
+
+			}
+
+			//else: recurse on children
+			return previous_size + children[j]->search_r(x - (previous_psum + previous_size));
+
+		}
+
+		bool contains_r(uint64_t x) {
+
+			if (x == 0) return true;
+
+			assert(x <= psum() + size());
+
+			uint32_t j = 0;
+
+			while (subtree_psums[j] + subtree_sizes[j] < x) {
+
+				j++;
+				assert(j < subtree_psums.size());
+
+			}
+
+			if (subtree_psums[j] + subtree_sizes[j] == x) return true;
+
+			//size/psum stored in previous counter
+			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
+
+			assert(x > previous_psum + previous_size or (x + previous_psum + previous_size == 0));
+
+			//i-th element is in the j-th children
+
+			//if children are leaves, extract psum from j-th leaf
+			if (has_leaves()) {
+
+				return leaves[j]->contains_r(x - (previous_psum + previous_size));
+
+			}
+
+			//else: recurse on children
+			return children[j]->contains_r(x - (previous_psum + previous_size));
+
+		}
+
+		bool is_root() {
+			return parent == NULL;
+		}
+
+		bool is_full() {
+			assert(nr_children <= 2 * B + 2);
+			return nr_children == (2 * B + 2);
+		}
+
+		/*
+		 * true iff this node can lose
+		 * a child and remain above the min.
+		 * number of children, B + 1
+		 * OR this node is the root
+		 */
+		bool can_lose() {
+			return (nr_children >= (B + 2) || (is_root()));
+		}
+
+		bool leaf_can_lose(leaf_type* leaf) {
+			return (leaf->size() >= (B_LEAF + 1));
+		}
+
+		void increment_rank() {
+			rank_++;
+		}
+
+		b_node* get_parent() {
+			return parent;
 		}
 
 		void overwrite_parent(b_node* P) {
@@ -840,11 +841,6 @@ namespace dyn {
 
 			}
 		}
-
-	private:
-		uint32_t B;
-
-		uint32_t B_LEAF;
 
 		/*
 		 * new element between elements i and i+1

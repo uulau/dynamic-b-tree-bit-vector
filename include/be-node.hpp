@@ -334,16 +334,16 @@ namespace dyn {
 			return subtree_sizes[nr_children - 1] + size_total;
 		}
 
-		uint64_t psum() {
-			return subtree_psums[nr_children - 1] + sum_total;
-		}
-
 	private:
 		uint32_t B;
 
 		uint32_t B_LEAF;
 
 		be_node() = delete;
+
+		uint64_t psum() {
+			return subtree_psums[nr_children - 1] + sum_total;
+		}
 
 		uint32_t rank() { return rank_; }
 
