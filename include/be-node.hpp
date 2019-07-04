@@ -8,8 +8,6 @@ namespace dyn {
 	template <class leaf_type> class be_node {
 	public:
 		explicit be_node(const be_node& n) {
-			message_buffer = vector<message>(n.message_buffer);
-
 			subtree_sizes = { n.subtree_sizes };
 			subtree_psums = { n.subtree_psums };
 
@@ -43,7 +41,9 @@ namespace dyn {
 
 			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty && children is empty
 
-			message_buffer = n.message_buffer;
+			message_buffer = vector<message>(n.message_buffer);
+
+			this->MESSAGE_COUNT = n.MESSAGE_COUNT;
 
 			this->B = n.B;
 
@@ -67,6 +67,7 @@ namespace dyn {
 
 			this->B = B;
 			this->B_LEAF = B_LEAF;
+			this->MESSAGE_COUNT = message_count;
 		}
 
 		/*
@@ -110,8 +111,10 @@ namespace dyn {
 				cc->overwrite_parent(this);
 
 			}
+
 			this->B = B;
 			this->B_LEAF = B_LEAF;
+			this->MESSAGE_COUNT = message_count;
 		}
 
 		/*
@@ -149,6 +152,7 @@ namespace dyn {
 			leaves = vector<leaf_type*>(c);
 			this->B = B;
 			this->B_LEAF = B_LEAF;
+			this->MESSAGE_COUNT = message_count;
 		}
 
 		void free_mem() {
@@ -163,7 +167,9 @@ namespace dyn {
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
-		bool at(uint64_t const i, bool updated = false, bool val = false) {
+		bool at(uint64_t i, bool updated = false, bool val = false) {
+			uint64_t insert_count = 0;
+			uint64_t remove_count = 0;
 			for (const auto& message : message_buffer) {
 				if (message.get_index() == i) {
 					if (message.get_type() != message_type::remove) {
@@ -172,21 +178,23 @@ namespace dyn {
 						continue;
 					}
 					else {
-						return at(i + 1, false, false);
+						++remove_count;
+						updated = false;
 					}
 				}
-
-				if (message.get_index() < i) {
+				else if (message.get_index() < i) {
 					if (message.get_type() == message_type::insert) {
-						return at(i - 1, false, false);
+						++insert_count;
+						updated = false;
 					}
 					else if (message.get_type() == message_type::remove) {
-						return at(i + 1, false, false);
+						++remove_count;
+						updated = false;
 					}
 				}
 			}
 
-			if (has_leaves() && updated) {
+			if (updated) {
 				return val;
 			}
 
@@ -204,11 +212,11 @@ namespace dyn {
 				assert(leaves[j] != NULL);
 				assert(i - previous_size < leaves[j]->size());
 
-				return leaves[j]->at(i - previous_size);
+				return leaves[j]->at(i + remove_count - insert_count - previous_size);
 			}
 
 			//else: recurse on children
-			return children[j]->at(i - previous_size, updated, val);
+			return children[j]->at(i + remove_count - insert_count - previous_size, updated, val);
 		}
 
 		/*
@@ -327,7 +335,7 @@ namespace dyn {
 		}
 
 		be_node* remove(uint64_t i) {
-			return create_message(remove_message(i));
+			return create_message(remove_message(i, at(i)));
 		}
 
 		uint64_t size() {
@@ -378,6 +386,8 @@ namespace dyn {
 
 		uint32_t B_LEAF;
 
+		uint32_t MESSAGE_COUNT;
+
 		/*
 		* in the following 2 vectors, the first nr_subtrees+1 elements refer to the
 		* nr_subtrees subtrees
@@ -423,7 +433,7 @@ namespace dyn {
 
 		bool message_buffer_is_full() const
 		{
-			return message_buffer.size() == message_buffer.capacity();
+			return message_buffer.size() == MESSAGE_COUNT;
 		}
 
 		void increment_rank() {
@@ -536,7 +546,7 @@ namespace dyn {
 
 					vector<be_node*> vn{ this, right };
 
-					new_root = new be_node(B, B_LEAF, vn, message_buffer.capacity());
+					new_root = new be_node(B, B_LEAF, vn, MESSAGE_COUNT);
 					assert(!new_root->is_full());
 
 					this->overwrite_parent(new_root);
@@ -555,7 +565,7 @@ namespace dyn {
 						auto r = n->split();
 						if (n->is_root()) {
 							vector<be_node*> vn{ n, r };
-							new_root = new be_node(B, B_LEAF, vn, message_buffer.capacity());
+							new_root = new be_node(B, B_LEAF, vn, MESSAGE_COUNT);
 							assert(!new_root->is_full());
 							n->overwrite_parent(new_root);
 							r->overwrite_parent(new_root);
@@ -658,10 +668,88 @@ namespace dyn {
 			be_node* new_root = nullptr;
 
 			if (!has_leaves()) {
-				new_root = add_message(m);
+				switch (m.get_type()) {
+				case message_type::insert: {
+					size_total++;
+					sum_total += m.get_val();
+					message_buffer.emplace_back(m);
+					break;
+				}
+				case message_type::remove: {
+					size_total--;
+					sum_total -= m.get_val();
+					message_buffer.emplace_back(m);
+					break;
+				}
+				case message_type::update: {
+					m.get_val() ? sum_total++ : sum_total--;
+					message_buffer.emplace_back(m);
+					break;
+				}
+				default: throw;
+				}
+
+				if (message_buffer_is_full()) {
+					uint64_t index = 0;
+					while (index < message_buffer.size()) {
+						auto curr_message = message_buffer[index];
+
+						uint32_t j = curr_message.get_type() == message_type::insert
+							? subtree_size_bound<false>(curr_message.get_index())
+							: subtree_size_bound<true>(curr_message.get_index());
+
+						auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+
+						curr_message.set_index(curr_message.get_index() - previous_size);
+
+						message& m = message_buffer[0];
+
+						m.set_dirty(true);
+
+						switch (m.get_type()) {
+						case message_type::insert: {
+							size_total--;
+							sum_total -= m.get_val();
+							break;
+						}
+						case message_type::remove: {
+							size_total++;
+							sum_total += m.get_val();
+							break;
+						}
+						case message_type::update: {
+							m.get_val() ? sum_total-- : sum_total++;
+							break;
+						}
+						default: throw;
+						}
+
+						new_root = children[j]->create_message(curr_message);
+
+						++index;
+					}
+					message_buffer.clear();
+				}
 			}
 			else {
-				new_root = add_to_leaf(m);
+				switch (m.get_type())
+				{
+				case message_type::insert:
+				{
+					new_root = insert_item(m.get_index(), m.get_val());
+					break;
+				}
+				case message_type::remove:
+				{
+					new_root = remove_item(m.get_index());
+					break;
+				}
+				case message_type::update:
+				{
+					increment_item(m.get_index(), m.get_val());
+					break;
+				}
+				}
 			}
 
 			if (!new_root) {
@@ -676,13 +764,17 @@ namespace dyn {
 		}
 
 		template <bool upper> uint32_t subtree_size_bound(uint32_t i) {
+			if (i >= subtree_sizes[nr_children - 1]) {
+				return nr_children - 1;
+			}
+
 			uint32_t j = 0;
 
 			if constexpr (upper) {
 				while (subtree_sizes[j] <= i) {
 
 					j++;
-					assert(j < subtree_sizes.size());
+					assert(j <= subtree_sizes.size());
 
 				}
 			}
@@ -709,110 +801,6 @@ namespace dyn {
 
 		uint32_t number_of_children() {
 			return nr_children;
-		}
-
-		be_node* add_to_leaf(const message& m) {
-			be_node* new_root = nullptr;
-			switch (m.get_type())
-			{
-			case message_type::insert:
-			{
-				new_root = insert_item(m.get_index(), m.get_val());
-				break;
-			}
-			case message_type::remove:
-			{
-				new_root = remove_item(m.get_index());
-				break;
-			}
-			case message_type::update:
-			{
-				increment_item(m.get_index(), m.get_val());
-				break;
-			}
-			default: throw;
-			}
-			return new_root;
-		}
-
-		be_node* flush_messages() {
-			be_node* new_root = nullptr;
-			while (!message_buffer.empty()) {
-				auto message = message_buffer[0];
-
-				uint32_t j = message.get_type() == message_type::insert
-					? subtree_size_bound<false>(message.get_index())
-					: subtree_size_bound<true>(message.get_index());
-
-				auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-
-				auto i = message.get_index() - previous_size;
-
-				erase_message(message_buffer[0]);
-
-				auto messages = message_buffer.size();
-
-				message.set_index(i);
-
-				new_root = children[j]->create_message(message);
-
-				if (messages != message_buffer.size()) {
-					break;
-				}
-			}
-			return new_root;
-		}
-
-		be_node* add_message(const message m) {
-			switch (m.get_type()) {
-			case message_type::insert: {
-				size_total++;
-				sum_total += m.get_val();
-				message_buffer.emplace_back(m);
-				break;
-			}
-			case message_type::remove: {
-				size_total--;
-				sum_total -= m.get_val();
-				message_buffer.emplace_back(m);
-				break;
-			}
-			case message_type::update: {
-				m.get_val() ? sum_total++ : sum_total--;
-				message_buffer.emplace_back(m);
-				break;
-			}
-			default: throw;
-			}
-
-			if (message_buffer_is_full()) {
-				return flush_messages();
-			}
-
-			return nullptr;
-		}
-
-		void erase_message(const message& m) {
-			switch (m.get_type()) {
-			case message_type::insert: {
-				size_total--;
-				sum_total -= m.get_val();
-				message_buffer.erase(message_buffer.begin());
-				break;
-			}
-			case message_type::remove: {
-				size_total++;
-				sum_total += m.get_val();
-				message_buffer.erase(message_buffer.begin());
-				break;
-			}
-			case message_type::update: {
-				m.get_val() ? sum_total-- : sum_total++;
-				message_buffer.erase(message_buffer.begin());
-				break;
-			}
-			default: throw;
-			}
 		}
 
 		template <bool single = false> void update_counters() {
@@ -1095,7 +1083,7 @@ namespace dyn {
 
 				assert(k == right_children_l.size());
 
-				right = new be_node(B, B_LEAF, right_children_l, message_buffer.capacity(), parent, rank() + 1);
+				right = new be_node(B, B_LEAF, right_children_l, MESSAGE_COUNT, parent, rank() + 1);
 				leaves.erase(leaves.begin() + nr_children / 2, leaves.end());
 
 			}
@@ -1111,7 +1099,7 @@ namespace dyn {
 
 				assert(k == right_children_n.size());
 
-				right = new be_node(B, B_LEAF, right_children_n, message_buffer.capacity(), parent, rank() + 1);
+				right = new be_node(B, B_LEAF, right_children_n, MESSAGE_COUNT, parent, rank() + 1);
 
 				children.erase(children.begin() + nr_children / 2, children.end());
 
@@ -1120,31 +1108,58 @@ namespace dyn {
 			nr_children = nr_children / 2;
 
 			auto count = message_buffer.size();
-			vector<message> mb(move(message_buffer));
+			vector<message> mb(std::move(message_buffer));
 			message_buffer.reserve(count);
 			size_total = 0;
 			sum_total = 0;
 
-			for (auto& message : mb) {
-				if (message.get_type() == message_type::insert) {
-					if (message.get_index() <= size()) {
-						add_message(message);
-					}
-					else {
-						message.set_index(message.get_index() - size());
-						right->add_message(message);
-					}
-				}
-				else {
-					if (message.get_index() < size()) {
-						add_message(message);
-					}
-					else {
-						message.set_index(message.get_index() - size());
-						right->add_message(message);
-					}
+			be_node* n;
+			for (auto& m : mb) {
+				if (m.get_dirty()) {
+					continue;
 				}
 
+				switch (m.get_type()) {
+				case message_type::insert: {
+					if (m.get_index() <= size()) {
+						n = this;
+					}
+					else {
+						m.set_index(m.get_index() - size());
+						n = right;
+					}
+					n->size_total++;
+					n->sum_total += m.get_val();
+					n->message_buffer.emplace_back(m);
+					break;
+				}
+				case message_type::remove: {
+					if (m.get_index() < size()) {
+						n = this;
+					}
+					else {
+						m.set_index(m.get_index() - size());
+						n = right;
+					}
+					n->size_total--;
+					n->sum_total -= m.get_val();
+					n->message_buffer.emplace_back(m);
+					break;
+				}
+				case message_type::update: {
+					if (m.get_index() < size()) {
+						n = this;
+					}
+					else {
+						m.set_index(m.get_index() - size());
+						n = right;
+					}
+					m.get_val() ? n->sum_total++ : n->sum_total--;
+					n->message_buffer.emplace_back(m);
+					break;
+				}
+				default: throw;
+				}
 			}
 
 			return right;
@@ -1505,7 +1520,7 @@ namespace dyn {
 					cc.insert(cc.end(), next->children.begin(), next->children.end());
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new be_node(B, B_LEAF, cc, message_buffer.capacity(), prev->parent, prev->rank());
+					xy = new be_node(B, B_LEAF, cc, MESSAGE_COUNT, prev->parent, prev->rank());
 				}
 				else {
 					assert(prev->nr_children == prev->leaves.size());
@@ -1521,7 +1536,7 @@ namespace dyn {
 					}
 
 					assert(cc.size() == 2 * B + 2);
-					xy = new be_node(B, B_LEAF, cc, message_buffer.capacity(), prev->parent, prev->rank());
+					xy = new be_node(B, B_LEAF, cc, MESSAGE_COUNT, prev->parent, prev->rank());
 				}
 
 				//update xy->parent

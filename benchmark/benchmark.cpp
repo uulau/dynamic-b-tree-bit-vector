@@ -12,21 +12,21 @@
 typedef b_bv<packed_vector, b_node> bbv;
 typedef b_bv<packed_vector, be_node> bebv;
 
-static int const no_value = 0;
+static int64_t const no_value = 0;
 
-static int const branching_min = 4;
-static int const branching_max = 16;
-static int const branching_multiplier = 2;
+static int64_t const branching_min = 4;
+static int64_t const branching_max = 16;
+static int64_t const branching_multiplier = 2;
 
-static int const leaf_min = 64;
-static int const leaf_max = 4096;
-static int const leaf_multiplier = 4;
+static int64_t const leaf_min = 64;
+static int64_t const leaf_max = 4096;
+static int64_t const leaf_multiplier = 4;
 
-static int const buffer_min = 4;
-static int const buffer_max = 16;
-static int const buffer_multiplier = 2;
+static int64_t const buffer_min = 4;
+static int64_t const buffer_max = 16;
+static int64_t const buffer_multiplier = 2;
 
-static int data_size = 100000;
+static uint64_t data_size = 100000;
 
 static void be_tree(benchmark::internal::Benchmark* benchmark) {
 	for (auto b = branching_min; b <= branching_max; b *= branching_multiplier)
@@ -62,7 +62,7 @@ static void sdsl_tree(benchmark::internal::Benchmark* benchmark) {
 static void rank_build(benchmark::State& state) {
 	sdsl::bit_vector bv(state.range(0));
 
-	for (int i = 0; i < bv.size(); ++i)
+	for (auto i = 0; i < bv.size(); ++i)
 	{
 		if (i % 2)
 		{

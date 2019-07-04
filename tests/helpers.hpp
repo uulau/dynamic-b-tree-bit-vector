@@ -15,15 +15,15 @@ template <class T> void insert_test(uint64_t size) {
 
 	for (uint64_t i = 0; i <= size; i++) {
 		auto set = i % 2;
-		tree->insert(i, i % 2);
+		tree->insert(i, set);
 		auto val = tree->at(i);
-		EXPECT_EQ(val, i % 2);
-		if (val != i % 2) {
+		EXPECT_EQ(val, set);
+		if (val != set) {
 			break;
 		}
-		auto size = tree->size();
-		EXPECT_EQ(size, i + 1);
-		if (size != i + 1) {
+		auto s = tree->size();
+		EXPECT_EQ(s, i + 1);
+		if (s != i + 1) {
 			break;
 		}
 	}
@@ -79,7 +79,7 @@ template <class T> void remove_test(uint64_t size) {
 		tree->remove(0);
 		auto new_size = tree->size();
 		EXPECT_TRUE(s - 1 == new_size);
-		if (size - 1 != new_size) {
+		if (s - 1 != new_size) {
 			break;
 		}
 		auto set = !old;

@@ -1442,7 +1442,6 @@ template<>
 inline auto
 int_vector<1>::operator[](const size_type& idx)const -> const_reference
 {
-	auto d = this->size();
     assert(idx < this->size());
     return ((*(m_data+(idx>>6)))>>(idx&0x3F))&1;
 }

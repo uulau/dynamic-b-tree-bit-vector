@@ -171,7 +171,7 @@ namespace dyn {
 
 			auto div = fast_div(size_);
 			for (uint64_t j = 0; j < div && s < x; ++j) {
-				pop = 64 + __builtin_popcountll(words[j]);
+				pop = uint64_t(64) + __builtin_popcountll(words[j]);
 				pos += 64;
 				s += pop;
 			}
@@ -181,7 +181,7 @@ namespace dyn {
 
 			for (; pos < size_ && s < x; ++pos) {
 
-				s += (1 + at(pos));
+				s += (uint64_t(1) + at(pos));
 
 			}
 
@@ -262,6 +262,7 @@ namespace dyn {
 			}
 
 			if (size_ + 1 > fast_mul(words.size())) {
+				words.reserve(words.size() + extra_);
 				words.resize(words.size() + extra_, 0);
 			}
 
@@ -335,9 +336,9 @@ namespace dyn {
 			assert(size_ > nr_left_ints);
 			uint64_t nr_right_ints = size_ - nr_left_ints;
 
-			assert(words.begin() + nr_left_words + extra_ < words.end());
+			//assert(words.begin() + nr_left_words + extra_ < words.end());
 			std::vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
-			std::copy(&words[nr_left_words], &words[tot_words], right_words.begin());
+			std::copy(words.begin() + nr_left_words, words.begin() + tot_words, right_words.begin());
 			words.resize(nr_left_words + extra_);
 			std::fill(words.begin() + nr_left_words, words.end(), 0);
 			words.shrink_to_fit();
