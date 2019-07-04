@@ -19,7 +19,7 @@ static int const branching_max = 16;
 static int const branching_multiplier = 2;
 
 static int const leaf_min = 256;
-static int const leaf_max = 16384;
+static int const leaf_max = 4096;
 static int const leaf_multiplier = 4;
 
 static int const buffer_min = 4;

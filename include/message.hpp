@@ -2,36 +2,70 @@
 
 namespace dyn {
 	enum message_type {
-		insert, remove, query, update, rank, select
+		insert = 0, remove = 1, update = 3, rank = 4
 	};
 
 	struct message {
-		uint64_t index;
-		message_type type;
-		bool value;
+		uint64_t data = 0;
+
+		message() = default;
+
+		message(const message& m) {
+			data = m.data;
+		}
+
+		void set_index(uint64_t val) {
+			data = (val & ~0xE000000000000000) | (data & 0xE000000000000000);
+		}
+
+		uint64_t get_index() const {
+			return data & ~0xE000000000000000;
+		}
+
+		void set_val(bool val) {
+			data = (data & ~(uint64_t(1) << 63)) | (uint64_t(val) << 63);
+		}
+
+		bool get_val() const {
+			return data >> 63;
+		}
+
+		void set_type(message_type type) {
+			data = data & ~(0x6000000000000000) | ((static_cast<uint64_t>(type) << 61) & 0x6000000000000000);
+		}
+
+		message_type get_type() const {
+			return static_cast<message_type>((data >> 61) & uint64_t(3));
+		}
 	};
 
 	static message const insert_message(uint64_t index, bool value) {
-		return message{ index, message_type::insert, value };
+		message m;
+		m.set_index(index);
+		m.set_val(value);
+		m.set_type(message_type::insert);
+		return m;
 	}
 
 	static message const remove_message(uint64_t index) {
-		return message{ index, message_type::remove, 0 };
-	}
-
-	static message const query_message(uint64_t index) {
-		return message{ index, message_type::query, 0 };
+		message m;
+		m.set_index(index);
+		m.set_type(message_type::remove);
+		return m;
 	}
 
 	static message const update_message(uint64_t index, bool value) {
-		return message{ index, message_type::update, value };
+		message m;
+		m.set_index(index);
+		m.set_val(value);
+		m.set_type(message_type::update);
+		return m;
 	}
 
 	static message const rank_message(uint64_t index) {
-		return message{ index, message_type::rank, 0 };
-	}
-
-	static message const select_message(uint64_t index) {
-		return message{ index, message_type::select, 0 };
+		message m;
+		m.set_index(index);
+		m.set_type(message_type::rank);
+		return m;
 	}
 }

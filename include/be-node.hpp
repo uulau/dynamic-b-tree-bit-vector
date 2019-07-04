@@ -7,11 +7,7 @@
 namespace dyn {
 	template <class leaf_type> class be_node {
 	public:
-		be_node() = delete;
-
 		explicit be_node(const be_node& n) {
-			B = n.B;
-			B_LEAF = n.B_LEAF;
 			message_buffer = vector<message>(n.message_buffer);
 
 			subtree_sizes = { n.subtree_sizes };
@@ -49,9 +45,9 @@ namespace dyn {
 
 			message_buffer = n.message_buffer;
 
-			this->B = B;
+			this->B = n.B;
 
-			this->B_LEAF = B_LEAF;
+			this->B_LEAF = n.B_LEAF;
 		}
 
 		/*
@@ -155,12 +151,6 @@ namespace dyn {
 			this->B_LEAF = B_LEAF;
 		}
 
-		bool has_leaves() const {
-
-			return has_leaves_;
-
-		}
-
 		void free_mem() {
 			if (has_leaves()) {
 				free_leaves();
@@ -170,30 +160,15 @@ namespace dyn {
 			}
 		}
 
-		void free_leaves() {
-			for (uint32_t i = 0; i < nr_children; ++i) {
-				delete leaves[i];
-			}
-		}
-
-		void free_children() {
-			for (uint32_t i = 0; i < nr_children; ++i) {
-				children[i]->free_mem();
-			}
-			for (uint32_t i = 0; i < nr_children; ++i) {
-				delete children[i];
-			}
-		}
-
 		/*
 		 * return i-th integer in the subtree rooted in this node
 		 */
 		bool at(uint64_t const i, bool updated = false, bool val = false) {
 			for (const auto& message : message_buffer) {
-				if (message.index == i) {
-					if (message.type != message_type::remove) {
+				if (message.get_index() == i) {
+					if (message.get_type() != message_type::remove) {
 						updated = true;
-						val = message.value;
+						val = message.get_val();
 						continue;
 					}
 					else {
@@ -201,11 +176,11 @@ namespace dyn {
 					}
 				}
 
-				if (message.index < i) {
-					if (message.type == message_type::insert) {
+				if (message.get_index() < i) {
+					if (message.get_type() == message_type::insert) {
 						return at(i - 1, false, false);
 					}
-					else if (message.type == message_type::remove) {
+					else if (message.get_type() == message_type::remove) {
 						return at(i + 1, false, false);
 					}
 				}
@@ -347,9 +322,70 @@ namespace dyn {
 			create_message(update_message(i, delta));
 		}
 
+		be_node* insert(const uint64_t i, bool x) {
+			return create_message(insert_message(i, x));
+		}
+
+		be_node* remove(uint64_t i) {
+			return create_message(remove_message(i));
+		}
+
+		uint64_t size() {
+			return subtree_sizes[nr_children - 1] + size_total;
+		}
+
+		uint64_t psum() {
+			return subtree_psums[nr_children - 1] + sum_total;
+		}
+
+	private:
+		uint32_t B;
+
+		uint32_t B_LEAF;
+
+		be_node() = delete;
+
+		uint32_t rank() { return rank_; }
+
+		void overwrite_rank(uint32_t r) { rank_ = r; }
+
+		uint64_t size_no_messages() {
+			assert(nr_children > 0);
+			assert(nr_children - 1 < subtree_sizes.size());
+
+			return subtree_sizes[nr_children - 1];
+		}
+
+		const be_node* get_parent() const {
+			return parent;
+		}
+
+		bool message_buffer_is_full() const
+		{
+			return message_buffer.size() == message_buffer.capacity();
+		}
+
+		void increment_rank() {
+			rank_++;
+		}
+
+		bool has_leaves() const {
+			return has_leaves_;
+		}
+
+		bool is_root() const {
+			return parent == nullptr;
+		}
+
+		bool is_full() const
+		{
+			assert(nr_children <= 2 * B + 2);
+			return nr_children == (2 * B + 2);
+		}
+
 		/*
-		 * increment || decrement i-th integer by delta
-		 */
+		* increment || decrement i-th integer by delta
+		*/
 		void increment_item(uint64_t i, bool delta) {
 			assert(i < size());
 
@@ -391,30 +427,14 @@ namespace dyn {
 				subtree_psums[k] = (delta ? subtree_psums[k] + delta : subtree_psums[k] - delta);
 
 			}
-
-		}
-
-		bool is_root() const {
-			return parent == nullptr;
-		}
-
-		bool is_full() const
-		{
-			assert(nr_children <= 2 * B + 2);
-			return nr_children == (2 * B + 2);
-		}
-
-		bool message_buffer_is_full() const
-		{
-			return message_buffer.size() == message_buffer.capacity();
 		}
 
 		/*
-		 * true iff this node can lose
-		 * a child && remain above the min.
-		 * number of children, B + 1
-		 * || this node is the root
-		 */
+		* true iff this node can lose
+		* a child && remain above the min.
+		* number of children, B + 1
+		* || this node is the root
+		*/
 		bool can_lose() const {
 			return (nr_children >= (B + 2) || (is_root()));
 		}
@@ -423,26 +443,6 @@ namespace dyn {
 			return (leaf->size() >= (B_LEAF + 1));
 		}
 
-		void increment_rank() {
-			rank_++;
-		}
-
-		const be_node* get_parent() const {
-			return parent;
-		}
-
-		be_node* insert(const uint64_t i, bool x) {
-			return create_message(insert_message(i, x));
-		}
-
-		/*
-		 * insert integer x at position i.
-		 * If this node is the root, return the new root.
-		 *
-		 * new root could be different than current root if current root
-		 * is full && is splitted
-		 *
-		 */
 		be_node* insert_item(const uint64_t i, bool x) {
 			assert(i <= size());
 			assert(is_root() || !parent->is_full());
@@ -517,21 +517,31 @@ namespace dyn {
 
 			//if !root, do !return anything.
 			return new_root;
-
 		}
 
-		be_node* remove(uint64_t i) {
-			return create_message(remove_message(i));
+		void free_leaves() {
+			for (uint32_t i = 0; i < nr_children; ++i) {
+				delete leaves[i];
+			}
+		}
+
+		void free_children() {
+			for (uint32_t i = 0; i < nr_children; ++i) {
+				children[i]->free_mem();
+			}
+			for (uint32_t i = 0; i < nr_children; ++i) {
+				delete children[i];
+			}
 		}
 
 		/*
 		 * remove the integer at position i.
-		 * If the root changes, return the new root.
-		 *
-		 * new root could be different than current root if current root
-		 * has only one non-leaf child.
-		 *
-		 */
+		* If the root changes, return the new root.
+		*
+		* new root could be different than current root if current root
+		* has only one non-leaf child.
+		*
+		*/
 		be_node* remove_item(uint64_t i) {
 			assert(i < size_no_messages());
 			//assert(is_root() || parent->can_lose());
@@ -583,33 +593,11 @@ namespace dyn {
 			return new_root;
 		}
 
-		uint32_t rank() { return rank_; }
-
-		void overwrite_rank(uint32_t r) { rank_ = r; }
-
-		uint64_t size_no_messages() {
-			assert(nr_children > 0);
-			assert(nr_children - 1 < subtree_sizes.size());
-
-			return subtree_sizes[nr_children - 1];
-		}
-
-		uint64_t size() {
-			return subtree_sizes[nr_children - 1] + size_total;
-		}
-
-		uint64_t psum() {
-			return subtree_psums[nr_children - 1] + sum_total;
-		}
-
 		be_node* create_message(const message& m) {
 			be_node* new_root = nullptr;
 
 			if (!has_leaves()) {
-				add_message(m);
-				if (message_buffer_is_full()) {
-					new_root = flush_messages();
-				}
+				new_root = add_message(m);
 			}
 			else {
 				new_root = add_to_leaf(m);
@@ -625,11 +613,6 @@ namespace dyn {
 
 			return new_root;
 		}
-
-	private:
-		uint32_t B;
-
-		uint32_t B_LEAF;
 
 		template <bool upper> uint32_t subtree_size_bound(uint32_t i) {
 			uint32_t j = 0;
@@ -659,24 +642,6 @@ namespace dyn {
 			message_buffer.reserve(message_count);
 		}
 
-		uint64_t messages_sum() {
-			if (has_leaves()) return 0;
-
-			uint64_t sum = 0;
-
-			for (const auto& message : message_buffer) {
-				if (message.type == message_type::insert) {
-					sum += message.value;
-				}
-				else if (message.type == message_type::remove) {
-					sum -= at(message.index);
-				}
-				sum += message.value;
-			}
-
-			return sum;
-		}
-
 		void overwrite_parent(be_node* P) {
 			parent = P;
 		}
@@ -687,21 +652,21 @@ namespace dyn {
 
 		be_node* add_to_leaf(const message& m) {
 			be_node* new_root = nullptr;
-			switch (m.type)
+			switch (m.get_type())
 			{
 			case message_type::insert:
 			{
-				new_root = insert_item(m.index, m.value);
+				new_root = insert_item(m.get_index(), m.get_val());
 				break;
 			}
 			case message_type::remove:
 			{
-				new_root = remove_item(m.index);
+				new_root = remove_item(m.get_index());
 				break;
 			}
 			case message_type::update:
 			{
-				increment_item(m.index, m.value);
+				increment_item(m.get_index(), m.get_val());
 				break;
 			}
 			default: throw;
@@ -714,19 +679,19 @@ namespace dyn {
 			while (!message_buffer.empty()) {
 				auto message = message_buffer[0];
 
-				uint32_t j = message.type == message_type::insert
-					? subtree_size_bound<false>(message.index)
-					: subtree_size_bound<true>(message.index);
+				uint32_t j = message.get_type() == message_type::insert
+					? subtree_size_bound<false>(message.get_index())
+					: subtree_size_bound<true>(message.get_index());
 
 				auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
-				auto i = message.index - previous_size;
+				auto i = message.get_index() - previous_size;
 
 				erase_message(message_buffer[0]);
 
 				auto messages = message_buffer.size();
 
-				message.index = i;
+				message.set_index(i);
 
 				new_root = children[j]->create_message(message);
 
@@ -737,45 +702,51 @@ namespace dyn {
 			return new_root;
 		}
 
-		void add_message(const message m) {
-			switch (m.type) {
+		be_node* add_message(const message m) {
+			switch (m.get_type()) {
 			case message_type::insert: {
 				size_total++;
-				sum_total += m.value;
+				sum_total += m.get_val();
 				message_buffer.emplace_back(m);
 				break;
 			}
 			case message_type::remove: {
 				size_total--;
-				sum_total -= m.value;
+				sum_total -= m.get_val();
 				message_buffer.emplace_back(m);
 				break;
 			}
 			case message_type::update: {
-				m.value ? sum_total++ : sum_total--;
+				m.get_val() ? sum_total++ : sum_total--;
 				message_buffer.emplace_back(m);
 				break;
 			}
 			default: throw;
 			}
+
+			if (message_buffer_is_full()) {
+				return flush_messages();
+			}
+
+			return nullptr;
 		}
 
 		void erase_message(const message& m) {
-			switch (m.type) {
+			switch (m.get_type()) {
 			case message_type::insert: {
 				size_total--;
-				sum_total -= m.value;
+				sum_total -= m.get_val();
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
 			case message_type::remove: {
 				size_total++;
-				sum_total += m.value;
+				sum_total += m.get_val();
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
 			case message_type::update: {
-				m.value ? sum_total-- : sum_total++;
+				m.get_val() ? sum_total-- : sum_total++;
 				message_buffer.erase(message_buffer.begin());
 				break;
 			}
@@ -1094,21 +1065,21 @@ namespace dyn {
 			sum_total = 0;
 
 			for (auto& message : mb) {
-				if (message.type == message_type::insert) {
-					if (message.index <= size()) {
+				if (message.get_type() == message_type::insert) {
+					if (message.get_index() <= size()) {
 						add_message(message);
 					}
 					else {
-						message.index = message.index - size();
+						message.set_index(message.get_index() - size());
 						right->add_message(message);
 					}
 				}
 				else {
-					if (message.index < size()) {
+					if (message.get_index() < size()) {
 						add_message(message);
 					}
 					else {
-						message.index = message.index - size();
+						message.set_index(message.get_index() - size());
 						right->add_message(message);
 					}
 				}

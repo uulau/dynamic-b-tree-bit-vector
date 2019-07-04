@@ -29,7 +29,7 @@ void generate_test(uint64_t operations, int ratio) {
 			}
 			else {
 				auto position = rand() % (insert_counter);
-				file << "QUERY " << position << '\n';
+				file << "RANK " << position << '\n';
 			}
 		}
 	}
@@ -56,8 +56,8 @@ const vector<message> read_test() {
 			if (parts[0] == "INSERT") {
 				messages.push_back(insert_message(stoi(parts[1]), stoi(parts[2])));
 			}
-			else if (parts[0] == "QUERY") {
-				messages.push_back(query_message(stoi(parts[1])));
+			else if (parts[0] == "RANK") {
+				messages.push_back(rank_message(stoi(parts[1])));
 			}
 		}
 		file.close();
@@ -93,23 +93,17 @@ const vector<message> generate_ram_test(uint64_t operations, int ratio) {
 
 template<class K> void execute_test(const vector<message>& messages, K& tree) {
 	for (const auto& message : messages) {
-		if (message.type == message_type::insert) {
-			tree.insert(message.index, message.value);
+		if (message.get_type() == message_type::insert) {
+			tree.insert(message.get_index(), message.get_val());
 		}
-		else if (message.type == message_type::query) {
-			tree.at(message.index);
+		else if (message.get_type() == message_type::remove) {
+			tree.remove(message.get_index());
 		}
-		else if (message.type == message_type::remove) {
-			tree.remove(message.index);
+		else if (message.get_type() == message_type::update) {
+			tree.set(message.get_index(), message.get_val());
 		}
-		else if (message.type == message_type::update) {
-			tree.set(message.index, message.value);
-		}
-		else if (message.type == message_type::select) {
-			tree.select(message.index, message.value);
-		}
-		else if (message.type == message_type::rank) {
-			tree.rank(message.index, message.value);
+		else if (message.get_type() == message_type::rank) {
+			tree.rank(message.get_index(), message.get_val());
 		}
 		else {
 			throw "Invalid message type.";
