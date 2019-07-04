@@ -378,6 +378,28 @@ namespace dyn {
 
 		uint32_t B_LEAF;
 
+		/*
+		* in the following 2 vectors, the first nr_subtrees+1 elements refer to the
+		* nr_subtrees subtrees
+		*/
+		std::vector<uint64_t> subtree_sizes;
+		std::vector<uint64_t> subtree_psums;
+
+		std::vector<message> message_buffer;
+
+		std::vector<be_node*> children;
+		std::vector<leaf_type*> leaves;
+
+		be_node* parent = nullptr; 		//NULL for root
+		uint32_t rank_ = 0; 		//rank of this node among its siblings
+
+		uint32_t nr_children = 0; 	//number of subtrees
+
+		bool has_leaves_ = false;	//if true, leaves array is nonempty && children is empty
+
+		int64_t size_total = 0;
+		int64_t sum_total = 0;
+
 		be_node() = delete;
 
 		uint64_t psum() {
@@ -1134,28 +1156,6 @@ namespace dyn {
 			return (l->size() == 2 * B_LEAF);
 
 		}
-
-		/*
-		* in the following 2 vectors, the first nr_subtrees+1 elements refer to the
-		* nr_subtrees subtrees
-		*/
-		std::vector<uint64_t> subtree_sizes;
-		std::vector<uint64_t> subtree_psums;
-
-		std::vector<message> message_buffer;
-
-		std::vector<be_node*> children;
-		std::vector<leaf_type*> leaves;
-
-		be_node* parent = nullptr; 		//NULL for root
-		uint32_t rank_ = 0; 		//rank of this node among its siblings
-
-		uint32_t nr_children = 0; 	//number of subtrees
-
-		bool has_leaves_ = false;	//if true, leaves array is nonempty && children is empty
-
-		int64_t size_total = 0;
-		int64_t sum_total = 0;
 
 		void remove_leaf_index(uint64_t i, uint64_t j) {
 			assert(this->leaves.size() == nr_children);
