@@ -13,7 +13,7 @@ namespace dyn {
 
 			if (n.has_leaves_) {
 
-				leaves = vector<leaf_type*>(n.nr_children, NULL);
+				leaves = std::vector<leaf_type*>(n.nr_children, NULL);
 
 				for (uint64_t i = 0; i < n.nr_children; ++i) {
 
@@ -24,7 +24,7 @@ namespace dyn {
 			}
 			else {
 
-				children = vector<be_node*>(n.nr_children, NULL);
+				children = std::vector<be_node*>(n.nr_children, NULL);
 
 				for (uint64_t i = 0; i < n.nr_children; ++i) {
 
@@ -41,7 +41,7 @@ namespace dyn {
 
 			has_leaves_ = n.has_leaves_;		//if true, leaves array is nonempty && children is empty
 
-			message_buffer = vector<message>(n.message_buffer);
+			message_buffer = std::vector<message>(n.message_buffer);
 
 			this->MESSAGE_COUNT = n.MESSAGE_COUNT;
 
@@ -56,13 +56,13 @@ namespace dyn {
 		explicit be_node(uint32_t B, uint32_t B_LEAF, uint64_t message_count) {
 			init_message_buffer(message_count);
 
-			subtree_sizes = vector<uint64_t>(2 * B + 2);
-			subtree_psums = vector<uint64_t>(2 * B + 2);
+			subtree_sizes = std::vector<uint64_t>(2 * B + 2);
+			subtree_psums = std::vector<uint64_t>(2 * B + 2);
 
 			nr_children = 1;
 			has_leaves_ = true;
 
-			leaves = vector<leaf_type*>(1);
+			leaves = std::vector<leaf_type*>(1);
 			leaves[0] = new leaf_type();
 
 			this->B = B;
@@ -81,8 +81,8 @@ namespace dyn {
 
 			init_message_buffer(message_count);
 
-			subtree_sizes = vector<uint64_t>(2 * B + 2);
-			subtree_psums = vector<uint64_t>(2 * B + 2);
+			subtree_sizes = std::vector<uint64_t>(2 * B + 2);
+			subtree_psums = std::vector<uint64_t>(2 * B + 2);
 
 			uint64_t si = 0;
 			uint64_t ps = 0;
@@ -102,7 +102,7 @@ namespace dyn {
 			nr_children = c.size();
 			has_leaves_ = false;
 
-			children = vector<be_node*>(c);
+			children = std::vector<be_node*>(c);
 
 			uint32_t r = 0;
 			for (auto cc : children) {
@@ -126,8 +126,8 @@ namespace dyn {
 			this->rank_ = rank;
 			this->parent = P;
 
-			subtree_sizes = vector<uint64_t>(2 * B + 2);
-			subtree_psums = vector<uint64_t>(2 * B + 2);
+			subtree_sizes = std::vector<uint64_t>(2 * B + 2);
+			subtree_psums = std::vector<uint64_t>(2 * B + 2);
 
 			assert(c.size() <= 2 * B + 2);
 
@@ -149,7 +149,7 @@ namespace dyn {
 
 			init_message_buffer(message_count);
 
-			leaves = vector<leaf_type*>(c);
+			leaves = std::vector<leaf_type*>(c);
 			this->B = B;
 			this->B_LEAF = B_LEAF;
 			this->MESSAGE_COUNT = message_count;
@@ -342,7 +342,7 @@ namespace dyn {
 		}
 
 		uint64_t size() {
-			return subtree_sizes[nr_children - 1] + size_total;
+			return subtree_sizes[nr_children - 1];
 		}
 
 		uint64_t bit_size() const {
@@ -410,13 +410,10 @@ namespace dyn {
 
 		bool has_leaves_ = false;	//if true, leaves array is nonempty && children is empty
 
-		int64_t size_total = 0;
-		int64_t sum_total = 0;
-
 		be_node() = delete;
 
 		uint64_t psum() {
-			return subtree_psums[nr_children - 1] + sum_total;
+			return subtree_psums[nr_children - 1];
 		}
 
 		uint32_t rank() { return rank_; }
@@ -547,7 +544,7 @@ namespace dyn {
 				//if this is the root, create new root
 				if (is_root()) {
 
-					vector<be_node*> vn{ this, right };
+					std::vector<be_node*> vn{ this, right };
 
 					new_root = new be_node(B, B_LEAF, vn, MESSAGE_COUNT);
 					assert(!new_root->is_full());
@@ -567,7 +564,7 @@ namespace dyn {
 					while (n && n->is_full()) {
 						auto r = n->split();
 						if (n->is_root()) {
-							vector<be_node*> vn{ n, r };
+							std::vector<be_node*> vn{ n, r };
 							new_root = new be_node(B, B_LEAF, vn, MESSAGE_COUNT);
 							assert(!new_root->is_full());
 							n->overwrite_parent(new_root);
@@ -673,19 +670,26 @@ namespace dyn {
 			if (!has_leaves()) {
 				switch (m.get_type()) {
 				case message_type::insert: {
-					size_total++;
-					sum_total += m.get_val();
+					for (auto j = subtree_size_bound<true>(m.get_index()); j < nr_children; j++) {
+						++subtree_sizes[j];
+						subtree_psums[j] += m.get_val();
+					}
+
 					message_buffer.emplace_back(m);
 					break;
 				}
 				case message_type::remove: {
-					size_total--;
-					sum_total -= m.get_val();
+					for (auto j = subtree_size_bound<false>(m.get_index()); j < nr_children; j++) {
+						--subtree_sizes[j];
+						subtree_psums[j] -= m.get_val();
+					}
 					message_buffer.emplace_back(m);
 					break;
 				}
 				case message_type::update: {
-					m.get_val() ? sum_total++ : sum_total--;
+					for (auto j = subtree_size_bound<false>(m.get_index()); j < nr_children; j++) {
+						m.get_val() ? ++subtree_psums[j] : --subtree_psums[j];
+					}
 					message_buffer.emplace_back(m);
 					break;
 				}
@@ -708,24 +712,6 @@ namespace dyn {
 						message& m = message_buffer[index];
 
 						m.set_dirty(true);
-
-						switch (m.get_type()) {
-						case message_type::insert: {
-							size_total--;
-							sum_total -= m.get_val();
-							break;
-						}
-						case message_type::remove: {
-							size_total++;
-							sum_total += m.get_val();
-							break;
-						}
-						case message_type::update: {
-							m.get_val() ? sum_total-- : sum_total++;
-							break;
-						}
-						default: throw;
-						}
 
 						new_root = children[j]->create_message(curr_message);
 
@@ -756,12 +742,8 @@ namespace dyn {
 				}
 			}
 
-			if (!new_root) {
-				update_counters<true>();
-
-			}
-			else {
-				new_root->update_counters();
+			if (new_root) {
+				new_root->update_counters<false>();
 			}
 
 			return new_root;
@@ -795,7 +777,7 @@ namespace dyn {
 		}
 
 		void init_message_buffer(uint64_t message_count) {
-			message_buffer = vector<message>();
+			message_buffer = std::vector<message>();
 			message_buffer.reserve(message_count);
 		}
 
@@ -866,10 +848,10 @@ namespace dyn {
 			nr_children++;
 
 			//temporary copy children
-			vector<be_node*> temp(children);
+			std::vector<be_node*> temp(children);
 
 			//reset children
-			children = vector<be_node*>(nr_children);
+			children = std::vector<be_node*>(nr_children);
 			uint32_t k = 0;//index in children
 
 			for (uint32_t j = 0; j < nr_children - 1; ++j) {
@@ -923,7 +905,7 @@ namespace dyn {
 				subtree_psums[0] = left->psum();
 				subtree_psums[1] = left->psum() + right->psum();
 
-				leaves = vector<leaf_type*>{ left, right };
+				leaves = std::vector<leaf_type*>{ left, right };
 
 				nr_children++;
 
@@ -951,10 +933,10 @@ namespace dyn {
 			nr_children++;
 
 			//temporary copy leaves
-			vector<leaf_type*> temp(leaves);
+			std::vector<leaf_type*> temp(leaves);
 
 			//reset leaves
-			leaves = vector<leaf_type*>(nr_children);
+			leaves = std::vector<leaf_type*>(nr_children);
 			uint32_t k = 0;//index in leaves
 
 			for (uint32_t j = 0; j < nr_children - 1; ++j) {
@@ -1077,7 +1059,7 @@ namespace dyn {
 
 			if (has_leaves()) {
 
-				vector<leaf_type*> right_children_l(nr_children - nr_children / 2);
+				std::vector<leaf_type*> right_children_l(nr_children - nr_children / 2);
 
 				uint64_t k = 0;
 
@@ -1093,7 +1075,7 @@ namespace dyn {
 			}
 			else {
 
-				vector<be_node*> right_children_n(nr_children - nr_children / 2);
+				std::vector<be_node*> right_children_n(nr_children - nr_children / 2);
 
 				uint64_t k = 0;
 
@@ -1111,10 +1093,8 @@ namespace dyn {
 
 			nr_children = nr_children / 2;
 
-			vector<message> mb(std::move(message_buffer));
+			std::vector<message> mb(std::move(message_buffer));
 			message_buffer.reserve(MESSAGE_COUNT);
-			size_total = 0;
-			sum_total = 0;
 
 			be_node* n;
 			for (auto& m : mb) {
@@ -1131,8 +1111,6 @@ namespace dyn {
 						m.set_index(m.get_index() - size());
 						n = right;
 					}
-					n->size_total++;
-					n->sum_total += m.get_val();
 					n->message_buffer.emplace_back(m);
 					break;
 				}
@@ -1144,8 +1122,6 @@ namespace dyn {
 						m.set_index(m.get_index() - size());
 						n = right;
 					}
-					n->size_total--;
-					n->sum_total -= m.get_val();
 					n->message_buffer.emplace_back(m);
 					break;
 				}
@@ -1157,7 +1133,6 @@ namespace dyn {
 						m.set_index(m.get_index() - size());
 						n = right;
 					}
-					m.get_val() ? n->sum_total++ : n->sum_total--;
 					n->message_buffer.emplace_back(m);
 					break;
 				}
@@ -1330,8 +1305,8 @@ namespace dyn {
 				uint32_t real_r = 0;
 				while (real_r < x->parent->nr_children) {
 					if (x->parent->children[real_r] == x) {
-						cerr << real_r << ' ' << x->rank() << endl;
-						cerr << x->has_leaves() << endl;
+						std::cerr << real_r << ' ' << x->rank() << std::endl;
+						std::cerr << x->has_leaves() << std::endl;
 						break;
 					}
 					++real_r;
@@ -1518,7 +1493,7 @@ namespace dyn {
 				}
 				be_node* xy;
 				if (!x->has_leaves()) {
-					vector< be_node* > cc(prev->children.begin(), prev->children.end());
+					std::vector< be_node* > cc(prev->children.begin(), prev->children.end());
 					cc.insert(cc.end(), next->children.begin(), next->children.end());
 
 					assert(cc.size() == 2 * B + 2);
@@ -1527,14 +1502,14 @@ namespace dyn {
 				else {
 					assert(prev->nr_children == prev->leaves.size());
 					assert(next->nr_children == next->leaves.size());
-					vector< leaf_type* > cc(prev->leaves.begin(), prev->leaves.end());
+					std::vector< leaf_type* > cc(prev->leaves.begin(), prev->leaves.end());
 					cc.insert(cc.end(), next->leaves.begin(), next->leaves.end());
 
 					if (cc.size() > 2 * B + 2) {
-						cerr << endl;
-						cerr << prev->nr_children << ' ' << prev->leaves.size() << endl;
-						cerr << next->nr_children << ' ' << next->leaves.size() << endl;
-						cerr << cc.size() << ' ' << 2 * B + 2 << endl;
+						std::cerr << std::endl;
+						std::cerr << prev->nr_children << ' ' << prev->leaves.size() << std::endl;
+						std::cerr << next->nr_children << ' ' << next->leaves.size() << std::endl;
+						std::cerr << cc.size() << ' ' << 2 * B + 2 << std::endl;
 					}
 
 					assert(cc.size() == 2 * B + 2);

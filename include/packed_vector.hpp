@@ -8,6 +8,7 @@
 #include <cassert>
 #include <algorithm>
 #include <vector>
+#include <cstdint>
 
 namespace dyn {
 	class packed_vector {
@@ -217,7 +218,7 @@ namespace dyn {
 			uint64_t s = 0;
 
 			for (uint64_t j = 0; j < size_ && s < x; ++j) {
-				s += (at(j) + 1);
+				s += (at(j) + uint64_t(1));
 			}
 
 			return s == x;
