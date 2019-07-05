@@ -31,7 +31,7 @@ namespace dyn {
 		}
 
 		void set_type(message_type type) {
-			data = (data & ~0x6000000000000000) | ((static_cast<uint64_t>(type) << 61) & 0x6000000000000000);
+			data = (data & ~0x6000000000000000) | (static_cast<uint64_t>(type) << 61);
 		}
 
 		message_type get_type() const {
@@ -39,7 +39,7 @@ namespace dyn {
 		}
 
 		void set_dirty(bool val) {
-			data = (data & ~0x7000000000000000) | ((uint64_t(val) << 60) & 0x7000000000000000);
+			data = (data & ~0x800000000000000) | (val << 60);
 		}
 
 		bool get_dirty() {

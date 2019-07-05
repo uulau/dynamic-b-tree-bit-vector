@@ -702,7 +702,7 @@ namespace dyn {
 
 						curr_message.set_index(curr_message.get_index() - previous_size);
 
-						message& m = message_buffer[0];
+						message& m = message_buffer[index];
 
 						m.set_dirty(true);
 
@@ -1107,9 +1107,8 @@ namespace dyn {
 
 			nr_children = nr_children / 2;
 
-			auto count = message_buffer.size();
 			vector<message> mb(std::move(message_buffer));
-			message_buffer.reserve(count);
+			message_buffer.reserve(MESSAGE_COUNT);
 			size_total = 0;
 			sum_total = 0;
 
@@ -1161,7 +1160,6 @@ namespace dyn {
 				default: throw;
 				}
 			}
-
 			return right;
 		}
 
