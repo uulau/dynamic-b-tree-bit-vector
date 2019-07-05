@@ -171,8 +171,10 @@ namespace dyn {
 			uint64_t insert_count = 0;
 			uint64_t remove_count = 0;
 			for (const auto& message : message_buffer) {
-				if (message.get_index() == i) {
-					if (message.get_type() != message_type::remove) {
+				auto index = message.get_index();
+				if (index == i) {
+					auto type = message.get_type();
+					if (type != message_type::remove) {
 						updated = true;
 						val = message.get_val();
 						continue;
@@ -182,12 +184,13 @@ namespace dyn {
 						updated = false;
 					}
 				}
-				else if (message.get_index() < i) {
-					if (message.get_type() == message_type::insert) {
+				else if (index < i) {
+					auto type = message.get_type();
+					if (type == message_type::insert) {
 						++insert_count;
 						updated = false;
 					}
-					else if (message.get_type() == message_type::remove) {
+					else if (type == message_type::remove) {
 						++remove_count;
 						updated = false;
 					}
@@ -330,11 +333,11 @@ namespace dyn {
 			create_message(update_message(i, delta));
 		}
 
-		be_node* insert(const uint64_t i, bool x) {
+		be_node<leaf_type>* insert(const uint64_t i, bool x) {
 			return create_message(insert_message(i, x));
 		}
 
-		be_node* remove(uint64_t i) {
+		be_node<leaf_type>* remove(uint64_t i) {
 			return create_message(remove_message(i, at(i)));
 		}
 
@@ -343,13 +346,13 @@ namespace dyn {
 		}
 
 		uint64_t bit_size() const {
-			uint64_t bs = 8 * sizeof(b_node);
+			uint64_t bs = 8 * sizeof(be_node<leaf_type>);
 
 			bs += subtree_sizes.capacity() * sizeof(uint64_t) * 8;
 
 			bs += subtree_psums.capacity() * sizeof(uint64_t) * 8;
 
-			bs += children.capacity() * sizeof(b_node*) * 8;
+			bs += children.capacity() * sizeof(be_node<leaf_type>*) * 8;
 
 			bs += leaves.capacity() * sizeof(leaf_type*) * 8;
 
@@ -359,7 +362,7 @@ namespace dyn {
 
 			if (has_leaves()) {
 
-				for (ulint i = 0; i < nr_children; ++i) {
+				for (uint64_t i = 0; i < nr_children; ++i) {
 					assert(leaves[i] != NULL);
 					bs += leaves[i]->bit_size();
 
@@ -368,7 +371,7 @@ namespace dyn {
 			}
 			else {
 
-				for (ulint i = 0; i < nr_children; ++i) {
+				for (uint64_t i = 0; i < nr_children; ++i) {
 
 					assert(children[i] != NULL);
 					bs += children[i]->bit_size();
@@ -664,7 +667,7 @@ namespace dyn {
 			return new_root;
 		}
 
-		be_node* create_message(const message& m) {
+		be_node<leaf_type>* create_message(const message& m) {
 			be_node* new_root = nullptr;
 
 			if (!has_leaves()) {
@@ -749,6 +752,7 @@ namespace dyn {
 					increment_item(m.get_index(), m.get_val());
 					break;
 				}
+				default: throw;
 				}
 			}
 

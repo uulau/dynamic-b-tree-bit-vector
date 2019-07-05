@@ -39,7 +39,7 @@ namespace dyn {
 		}
 
 		void set_dirty(bool val) {
-			data = (data & ~0x800000000000000) | (val << 60);
+			data = (data & ~0x800000000000000) | (uint64_t(val) << 60);
 		}
 
 		bool get_dirty() {
@@ -47,7 +47,7 @@ namespace dyn {
 		}
 	};
 
-	static message const insert_message(uint64_t index, bool value) {
+	inline static message const insert_message(uint64_t index, bool value) {
 		message m;
 		m.set_index(index);
 		m.set_val(value);
@@ -56,7 +56,7 @@ namespace dyn {
 		return m;
 	}
 
-	static message const remove_message(uint64_t index, bool val) {
+	inline static message const remove_message(uint64_t index, bool val) {
 		message m;
 		m.set_index(index);
 		m.set_val(val);
@@ -65,7 +65,7 @@ namespace dyn {
 		return m;
 	}
 
-	static message const update_message(uint64_t index, bool value) {
+	inline static message const update_message(uint64_t index, bool value) {
 		message m;
 		m.set_index(index);
 		m.set_val(value);
@@ -74,7 +74,7 @@ namespace dyn {
 		return m;
 	}
 
-	static message const rank_message(uint64_t index) {
+	inline static message const rank_message(uint64_t index) {
 		message m;
 		m.set_index(index);
 		m.set_dirty(false);

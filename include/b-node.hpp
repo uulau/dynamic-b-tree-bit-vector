@@ -163,7 +163,7 @@ namespace dyn {
 
 			if (has_leaves()) {
 
-				for (ulint i = 0; i < nr_children; ++i) {
+				for (uint64_t i = 0; i < nr_children; ++i) {
 					assert(leaves[i] != NULL);
 					bs += leaves[i]->bit_size();
 
@@ -172,7 +172,7 @@ namespace dyn {
 			}
 			else {
 
-				for (ulint i = 0; i < nr_children; ++i) {
+				for (uint64_t i = 0; i < nr_children; ++i) {
 
 					assert(children[i] != NULL);
 					bs += children[i]->bit_size();
@@ -711,11 +711,11 @@ namespace dyn {
 
 		uint64_t serialize(ostream& out) const {
 
-			ulint w_bytes = 0;
-			ulint subtree_sizes_len = subtree_sizes.size();
-			ulint subtree_psums_len = subtree_psums.size();
-			ulint children_len = children.size();
-			ulint leaves_len = leaves.size();
+			uint64_t w_bytes = 0;
+			uint64_t subtree_sizes_len = subtree_sizes.size();
+			uint64_t subtree_psums_len = subtree_psums.size();
+			uint64_t children_len = children.size();
+			uint64_t leaves_len = leaves.size();
 
 
 			out.write((char*)& subtree_sizes_len, sizeof(subtree_sizes_len));
@@ -763,10 +763,10 @@ namespace dyn {
 
 		void load(istream& in) {
 
-			ulint subtree_sizes_len;
-			ulint subtree_psums_len;
-			ulint children_len;
-			ulint leaves_len;
+			uint64_t subtree_sizes_len;
+			uint64_t subtree_psums_len;
+			uint64_t children_len;
+			uint64_t leaves_len;
 
 			in.read((char*)& subtree_sizes_len, sizeof(subtree_sizes_len));
 

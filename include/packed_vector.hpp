@@ -363,9 +363,9 @@ namespace dyn {
 			}
 
 			const auto word_nr = fast_div(i);
-			const uint8_t pos = fast_mod(i);
+			const auto pos = fast_mod(i);
 
-			words[word_nr] ^= (-(uint64_t)x ^ words[word_nr]) & (MASK << pos);
+			words[word_nr] = (words[word_nr] & ~(MASK << pos)) | (uint64_t(x) << pos);
 		}
 
 		/*
@@ -419,7 +419,7 @@ namespace dyn {
 
 				falling_out_temp = (words[j] >> (int_per_word_ - 1));
 
-				words[j] <<= width_;
+				words[j] <<= 1;
 
 				assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
 
@@ -463,7 +463,7 @@ namespace dyn {
 
 			//now for the remaining integers we can work blockwise
 			for (uint64_t j = current_word; fast_mul(j) < size_; ++j) {
-				words[j] >>= width_;
+				words[j] >>= 1;
 
 				falling_in_idx = fast_mul(j + 1) < size_ ? at(fast_mul(j + 1)) : 0;
 
