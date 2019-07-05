@@ -342,7 +342,22 @@ namespace dyn {
 		}
 
 		uint64_t size() {
-			return subtree_sizes[nr_children - 1];
+			uint64_t message_count = 0;
+
+			for (const auto& message : message_buffer) {
+				switch (message.get_type()) {
+				case message_type::insert: {
+					++message_count;
+					break;
+				}
+				case message_type::remove: {
+					--message_count;
+					break;
+				}
+				}
+			}
+
+			return subtree_sizes[nr_children - 1] + message_count;
 		}
 
 		uint64_t bit_size() const {
@@ -413,19 +428,28 @@ namespace dyn {
 		be_node() = delete;
 
 		uint64_t psum() {
-			return subtree_psums[nr_children - 1];
+			uint64_t psum = 0;
+
+			for (const auto& message : message_buffer) {
+				switch (message.get_type()) {
+				case message_type::insert: {
+					psum += message.get_val();
+				}
+				case message_type::remove: {
+					psum -= message.get_val();
+				}
+				case message_type::update: {
+					message.get_val() ? ++psum : --psum;
+				}
+				}
+			}
+
+			return subtree_psums[nr_children - 1] + psum;
 		}
 
 		uint32_t rank() { return rank_; }
 
 		void overwrite_rank(uint32_t r) { rank_ = r; }
-
-		uint64_t size_no_messages() {
-			assert(nr_children > 0);
-			assert(nr_children - 1 < subtree_sizes.size());
-
-			return subtree_sizes[nr_children - 1];
-		}
 
 		const be_node* get_parent() const {
 			return parent;
@@ -614,7 +638,7 @@ namespace dyn {
 		*
 		*/
 		be_node* remove_item(uint64_t i) {
-			assert(i < size_no_messages());
+			//assert(i < size_no_messages());
 			//assert(is_root() || parent->can_lose());
 
 			be_node* p = this;
@@ -642,7 +666,7 @@ namespace dyn {
 			//Find the child from which to remove
 			assert(x->can_lose());
 			assert(this->can_lose());
-			assert(i < this->size_no_messages());
+			//assert(i < this->size_no_messages());
 
 			uint32_t j = subtree_size_bound<true>(i);
 
@@ -668,33 +692,7 @@ namespace dyn {
 			be_node* new_root = nullptr;
 
 			if (!has_leaves()) {
-				switch (m.get_type()) {
-				case message_type::insert: {
-					for (auto j = subtree_size_bound<true>(m.get_index()); j < nr_children; j++) {
-						++subtree_sizes[j];
-						subtree_psums[j] += m.get_val();
-					}
-
-					message_buffer.emplace_back(m);
-					break;
-				}
-				case message_type::remove: {
-					for (auto j = subtree_size_bound<false>(m.get_index()); j < nr_children; j++) {
-						--subtree_sizes[j];
-						subtree_psums[j] -= m.get_val();
-					}
-					message_buffer.emplace_back(m);
-					break;
-				}
-				case message_type::update: {
-					for (auto j = subtree_size_bound<false>(m.get_index()); j < nr_children; j++) {
-						m.get_val() ? ++subtree_psums[j] : --subtree_psums[j];
-					}
-					message_buffer.emplace_back(m);
-					break;
-				}
-				default: throw;
-				}
+				message_buffer.emplace_back(m);
 
 				if (message_buffer_is_full()) {
 					uint64_t index = 0;
@@ -705,11 +703,35 @@ namespace dyn {
 							? subtree_size_bound<false>(curr_message.get_index())
 							: subtree_size_bound<true>(curr_message.get_index());
 
+						message& m = message_buffer[index];
+
+						switch (m.get_type()) {
+						case message_type::insert: {
+							for (auto t = j; t < nr_children; t++) {
+								++subtree_sizes[t];
+								subtree_psums[t] += m.get_val();
+							}
+							break;
+						}
+						case message_type::remove: {
+							for (auto t = j; t < nr_children; t++) {
+								--subtree_sizes[t];
+								subtree_psums[t] -= m.get_val();
+							}
+							break;
+						}
+						case message_type::update: {
+							for (auto t = j; t < nr_children; t++) {
+								m.get_val() ? ++subtree_psums[t] : --subtree_psums[t];
+							}
+							break;
+						}
+						default: throw;
+						}
+
 						auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
 						curr_message.set_index(curr_message.get_index() - previous_size);
-
-						message& m = message_buffer[index];
 
 						m.set_dirty(true);
 
@@ -740,10 +762,6 @@ namespace dyn {
 				}
 				default: throw;
 				}
-			}
-
-			if (new_root) {
-				new_root->update_counters<false>();
 			}
 
 			return new_root;
@@ -1269,29 +1287,10 @@ namespace dyn {
 			uint64_t z = x->at(i);
 			x->remove(i);
 
-			//update satellite data
-			//requires traversal back up to root
-
 			while (j < this->nr_children) {
 				--subtree_sizes[j];
 				subtree_psums[j] -= z;
 				++j;
-			}
-
-			be_node* tmp_parent = this->parent;
-			be_node* tmp_child = this;
-			while (tmp_parent != NULL) {
-				uint32_t r = tmp_child->rank_;
-				uint32_t nc = tmp_parent->nr_children;
-				while (r < nc) {
-					--(tmp_parent->subtree_sizes[r]);
-
-					tmp_parent->subtree_psums[r] -= z;
-					++r;
-				}
-
-				tmp_child = tmp_parent;
-				tmp_parent = tmp_child->parent;
 			}
 		}
 
@@ -1300,7 +1299,6 @@ namespace dyn {
 			//Need to ensure that *x
 			//can lose a child && still have
 			//the min # of children
-
 			if (x != x->parent->children[x->rank()]) {
 				uint32_t real_r = 0;
 				while (real_r < x->parent->nr_children) {
