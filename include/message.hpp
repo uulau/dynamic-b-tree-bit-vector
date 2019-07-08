@@ -16,6 +16,7 @@ namespace dyn {
 
 		void set_index(uint64_t val) {
 			data = (val & ~0xF000000000000000) | (data & 0xF000000000000000);
+			assert(get_index() == val);
 		}
 
 		uint64_t get_index() const {
@@ -24,6 +25,7 @@ namespace dyn {
 
 		void set_val(bool val) {
 			data = (data & ~(uint64_t(1) << 63)) | (uint64_t(val) << 63);
+			assert(get_val() == val);
 		}
 
 		bool get_val() const {
@@ -32,6 +34,7 @@ namespace dyn {
 
 		void set_type(message_type type) {
 			data = (data & ~0x6000000000000000) | (static_cast<uint64_t>(type) << 61);
+			assert(get_type() == type);
 		}
 
 		message_type get_type() const {
@@ -40,6 +43,7 @@ namespace dyn {
 
 		void set_dirty(bool val) {
 			data = (data & ~0x800000000000000) | (uint64_t(val) << 60);
+			assert(get_dirty() == val);
 		}
 
 		bool get_dirty() {
@@ -53,6 +57,10 @@ namespace dyn {
 		m.set_val(value);
 		m.set_dirty(false);
 		m.set_type(message_type::insert);
+		assert(m.get_index() == index);
+		assert(m.get_val() == value);
+		assert(m.get_dirty() == false);
+		assert(m.get_type() == message_type::insert);
 		return m;
 	}
 
@@ -62,6 +70,10 @@ namespace dyn {
 		m.set_val(val);
 		m.set_dirty(false);
 		m.set_type(message_type::remove);
+		assert(m.get_index() == index);
+		assert(m.get_val() == val);
+		assert(m.get_dirty() == false);
+		assert(m.get_type() == message_type::remove);
 		return m;
 	}
 
@@ -71,6 +83,10 @@ namespace dyn {
 		m.set_val(value);
 		m.set_dirty(false);
 		m.set_type(message_type::update);
+		assert(m.get_index() == index);
+		assert(m.get_val() == value);
+		assert(m.get_dirty() == false);
+		assert(m.get_type() == message_type::update);
 		return m;
 	}
 
@@ -79,6 +95,9 @@ namespace dyn {
 		m.set_index(index);
 		m.set_dirty(false);
 		m.set_type(message_type::rank);
+		assert(m.get_index() == index);
+		assert(m.get_dirty() == false);
+		assert(m.get_type() == message_type::rank);
 		return m;
 	}
 }
