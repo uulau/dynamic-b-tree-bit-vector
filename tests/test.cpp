@@ -4,10 +4,11 @@
 #include "packed_vector.hpp"
 #include "be-node.hpp"
 #include "b-node.hpp"
+#include "sdsl-bv.hpp"
 
 typedef b_bv<packed_vector, b_node> bbv;
 typedef b_bv<packed_vector, be_node> bebv;
-typedef b_bv<packed_vector, be_node> sdslbv;
+typedef sdsl_bv sdslbv;
 
 TEST(BEBV, Insertion10) {
 	insert_test<bebv>(10);

@@ -1,5 +1,6 @@
 #include "packed_vector.hpp"
 #include "b-bv.hpp"
+#include "sdsl-bv.hpp"
 #include "be-node.hpp"
 
 using namespace std;
@@ -7,12 +8,15 @@ using namespace dyn;
 
 int main()
 {
-	auto const count = 100000000;
+	auto const count = 100;
 
-	auto tree = new b_bv<packed_vector, be_node>(uint32_t(8), uint32_t(4096), uint64_t(16));
+	auto tree = new sdsl_bv(0, 0, 10);
 
 	for (uint64_t i = 0; i < count; i++) {
-		tree->insert(i, true);
+		assert(tree->size() == i);
+		tree->insert(i, i % 2);
+		assert(tree->size() == i + 1);
+		assert(tree->at(i) == i % 2);
 	}
 
 	for (uint64_t i = 0; i < count; i++) {
@@ -28,11 +32,17 @@ int main()
 	}
 
 	for (uint64_t i = 0; i < count; i++) {
-		tree->set(i, false);
+		assert(tree->at(i) == i % 2);
+		auto size = tree->size();
+		tree->set(i, (i + 1) % 2);
+		assert(tree->at(i) == (i + 1) % 2);
+		assert(size == tree->size());
 	}
 
 	for (uint64_t i = 0; i < count; i++) {
+		int size = tree->size();
 		tree->remove(0);
+		assert(size == tree->size() + 1);
 	}
 
 	delete tree;

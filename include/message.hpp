@@ -46,7 +46,7 @@ namespace dyn {
 			assert(get_dirty() == val);
 		}
 
-		bool get_dirty() {
+		bool get_dirty() const {
 			return (data >> 60) & uint64_t(1);
 		}
 	};

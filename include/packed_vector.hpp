@@ -338,6 +338,7 @@ namespace dyn {
 			uint64_t nr_right_ints = size_ - nr_left_ints;
 
 			//assert(words.begin() + nr_left_words + extra_ < words.end());
+			assert(words.begin() + tot_words <= words.end());
 			std::vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
 			std::copy(words.begin() + nr_left_words, words.begin() + tot_words, right_words.begin());
 			words.resize(nr_left_words + extra_);
@@ -398,9 +399,8 @@ namespace dyn {
 
 			auto val = fast_mul(current_word);
 			if (val < i) {
-				falling_out = (words[current_word] >> (int_per_word_ - 1));
+				falling_out = (words[current_word] >> (int_per_word_ - 1) * width_) & uint64_t(1);
 				uint64_t falling_out_idx = std::min(val + (int_per_word_ - 1), size_);
-
 				for (uint64_t j = falling_out_idx; j > i; --j) {
 					assert(j - 1 < size_);
 					set<false>(j, at(j - 1));
@@ -418,7 +418,7 @@ namespace dyn {
 
 				assert(j < words.size());
 
-				falling_out_temp = (words[j] >> (int_per_word_ - 1));
+				falling_out_temp = (words[j] >> (int_per_word_ - 1)) & uint64_t(1);
 
 				words[j] <<= 1;
 

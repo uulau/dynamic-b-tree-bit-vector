@@ -1,7 +1,7 @@
 #pragma once
 
 template<class T> T* generate_tree(uint64_t amount) {
-	auto tree = new T(16, 4096, 128);
+	auto tree = new T(4, 64, 128);
 
 	for (uint64_t i = 0; i < amount; i++) {
 		tree->push_back(i % 2);
@@ -34,7 +34,7 @@ template <class T> void insert_test(uint64_t size) {
 template <class T> void update_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	for (uint64_t i = 0; i < size; i++) {
-		auto set = (i + 1) % 2;
+		bool set = (i + 1) % 2;
 		tree->set(i, set);
 		auto val = tree->at(i);
 		EXPECT_EQ(val, set);
