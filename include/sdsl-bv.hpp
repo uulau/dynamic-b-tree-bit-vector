@@ -37,7 +37,7 @@ namespace dyn {
 			for (auto y = message_buffer.rbegin(); y != message_buffer.rend(); ++y) {
 				const auto message = *y;
 
-				if (message.get_dirty() || message.get_index() > i) {
+				if (message.get_index() > i) {
 					continue;
 				}
 
@@ -62,48 +62,7 @@ namespace dyn {
 		}
 
 		uint64_t size() const {
-			uint64_t message_count = 0;
-
-			for (const auto& message : message_buffer) {
-				switch (message.get_type()) {
-					if (message.get_dirty()) {
-						continue;
-					}
-
-				case message_type::insert: {
-					++message_count;
-					break;
-				}
-				case message_type::remove: {
-					--message_count;
-					break;
-				}
-				}
-			}
-			return message_count + bv.size();
-		}
-
-		template <message_type mtype> uint64_t messages() {
-			uint64_t message_count = 0;
-
-			for (const auto& message : message_buffer) {
-				if (message.get_dirty()) {
-					continue;
-				}
-
-				if constexpr (mtype == message_type::insert) {
-					if (message.get_type() == message_type::insert) {
-						++message_count;
-					}
-				}
-				else {
-					if (message.get_type() == message_type::remove) {
-						++message_count;
-					}
-				}
-			}
-
-			return message_count;
+			return bv.size() + message_buffer.size();
 		}
 
 		void insert(uint64_t i, bool x) {
@@ -120,128 +79,85 @@ namespace dyn {
 		}
 
 		uint64_t select(uint64_t i) {
-			if (!ss.initialized() || message_buffer.size() > 0) {
-				flush_messages();
-				util::init_support(ss, &bv);
-			}
-
-			return ss(i + 1);
+			return 0;
 		}
 
 		uint64_t rank(const uint64_t i) {
-			auto static_rank = rs.initialized() ? rs.rank(i) : 0;
+			uint64_t sum = 0;
+			uint64_t mcount = 0;
 
-			return static_rank;
+			for (auto it = message_buffer.rbegin(); it != message_buffer.rend(); ++it) {
+				if (it->get_index() < i) {
+					++mcount;
+					sum += it->get_val();
+
+					if (mcount == i) {
+						break;
+					}
+				}
+				else {
+					break;
+				}
+			}
+
+			if (rs.initialized()) {
+				sum += rs.rank(i - mcount);
+			}
+
+			return sum;
 		}
 
 	private:
 		void flush_messages() {
-			auto inserts = messages<message_type::insert>();
-			vector<char> vals;
-			vals.reserve(bv.size() + inserts);
+			auto inserts = message_buffer.size();
 
-			for (const auto& x : bv) {
-				vals.emplace_back(x);
+			auto temp = vector(inserts + bv.size(), -1);
+
+			for (auto& it = message_buffer.rbegin(); it != message_buffer.rend(); ++it) {
+				auto index = it->get_index();
+
+				while (temp[index] != -1) {
+					++index;
+				}
+
+				temp[index] = it->get_val();
 			}
 
-			for (auto begin = message_buffer.rbegin(); begin != message_buffer.rend(); begin++) {
-				auto message = *begin;
-
-				if (message.get_dirty()) {
-					continue;
+			for (auto i = 0; i < bv.size(); ++i) {
+				auto index = i;
+				while (temp[index] != -1) {
+					++index;
 				}
-
-				if (message.get_index() >= vals.size()) {
-					vals.resize(vals.size() + (message.get_index() + 1 - vals.size()), -1);
-				}
-
-				switch (message.get_type()) {
-				case message_type::insert: {
-					if (vals[message.get_index()] == -1) {
-						vals[message.get_index()] = message.get_val();
-					}
-					else {
-						vals.insert(vals.begin() + message.get_index(), message.get_val());
-					}
-					break;
-				}
-
-				case message_type::remove: {
-					vals.erase(vals.begin() + message.get_index());
-					break;
-				}
-				default: throw;
-				}
+				temp[index] = bv[i];
 			}
+
+			bv = bit_vector(temp.size());
+
+			for (int i = 0; i < temp.size(); ++i) {
+				bv[i] = temp[i];
+			}
+
+			util::init_support(ss, &bv);
+			util::init_support(rs, &bv);
 
 			message_buffer.clear();
-
-			bv = bit_vector(vals.size());
-
-			for (auto i = 0; i < bv.size(); i++) {
-				assert(vals[i] != -1);
-				bv[i] = vals[i];
-			}
-
-			util::init_support(rs, &bv);
-			util::init_support(ss, &bv);
 		}
 
 		void add_message(const message& m) {
 			assert(!m.get_dirty());
 
-			message_buffer.emplace_back(m);
-
-			if (message_buffer.size() > 1) {
-				message& latest_message = message_buffer[message_buffer.size() - 1];
-				auto latest_index = latest_message.get_index();
-
-				for (auto y = message_buffer.rbegin() + 1; y != message_buffer.rend(); ++y)
-				{
-					message& current_message = *y;
-
-					if (current_message.get_dirty()) {
-						continue;
-					}
-
-					switch (latest_message.get_type())
-					{
-					case message_type::insert:
-					{
-						if (latest_message.get_index() > current_message.get_index()) {
-							latest_message.set_index(latest_message.get_index() - 1);
-						}
-						else if (latest_message.get_index() < current_message.get_index()) {
-							current_message.set_index(current_message.get_index() + 1);
-						}
+			if (message_buffer.empty()) {
+				message_buffer.emplace_back(m);
+			}
+			else {
+				for (auto it = message_buffer.begin(); it != message_buffer.end(); ++it) {
+					message& current_message = *it;
+					if (current_message.get_index() < m.get_index()) {
+						message_buffer.insert(it, m);
 						break;
 					}
-
-					case message_type::remove:
-					{
-						switch (current_message.get_type()) {
-						case message_type::insert: {
-							if (latest_message.get_index() == current_message.get_index()) {
-								current_message.set_dirty(true);
-								latest_message.set_dirty(true);
-							}
-							else if (latest_message.get_index() < current_message.get_index()) {
-								current_message.set_index(current_message.get_index() - 1);
-							}
-							break;
-						}
-						case message_type::remove: {
-							if (latest_message.get_index() > current_message.get_index()) {
-								latest_message.set_index(latest_message.get_index() + 1);
-							}
-							else if (latest_message.get_index() < current_message.get_index()) {
-								current_message.set_index(current_message.get_index() - 1);
-							}
-							break;
-						}
-						}
-						break;
-					}
+					else {
+						it->set_index(it->get_index() + 1);
 					}
 				}
 			}

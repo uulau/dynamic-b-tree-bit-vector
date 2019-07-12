@@ -1,10 +1,11 @@
 #pragma once
 
 template<class T> T* generate_tree(uint64_t amount) {
-	auto tree = new T(2, 64, 8);
+	auto tree = new T(2, 64, 256);
 
 	for (uint64_t i = 0; i < amount; i++) {
 		tree->push_back(i % 2);
+		assert(tree->at(i) == i % 2);
 	}
 
 	return tree;
@@ -52,7 +53,7 @@ template <class T> void rank_test(uint64_t size) {
 		auto val = tree->rank(i);
 		sum += tree->at(i - 1);
 		EXPECT_EQ(sum, val);
-		if (i != val) {
+		if (sum != val) {
 			break;
 		}
 	}
