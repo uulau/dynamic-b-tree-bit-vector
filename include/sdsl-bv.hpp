@@ -16,15 +16,28 @@ namespace dyn {
 	public:
 		sdsl_bv() = delete;
 
-		explicit sdsl_bv(uint64_t message_count = 0) {
+		explicit sdsl_bv(uint64_t message_count, uint64_t bucket_w = 2) {
+			if (!message_count) {
+				throw invalid_argument("Message buffer size must be greater than zero.");
+			}
+
+			if (!bucket_w) {
+				throw invalid_argument("Bucket size must be greater than zero.");
+			}
+
+			if (bucket_w % 2 != 0) {
+				throw invalid_argument("Bucket size must be a power of two.");
+			}
+
 			bv = bit_vector();
 			util::init_support(rs, &bv);
 			util::init_support(ss, &bv);
 			message_buffer = map<uint64_t, pair<uint64_t, vector<message>>>();
 			message_max = message_count;
+			bucket_width = bucket_w;
 		}
 
-		explicit sdsl_bv(uint32_t B = 0, uint32_t B_LEAF = 0, uint64_t message_count = 0) : sdsl_bv(message_count) {
+		explicit sdsl_bv(uint32_t B, uint32_t B_LEAF, uint64_t message_count) : sdsl_bv(message_count) {
 		}
 
 		~sdsl_bv() = default;
@@ -122,7 +135,7 @@ namespace dyn {
 
 					// Won't affect rank anymore
 					if (message.get_index() + (bucket * bucket_width) >= i) {
-						break;
+						continue;
 					}
 
 					++insertions;
@@ -139,10 +152,38 @@ namespace dyn {
 
 	private:
 		void flush_messages() {
-			// Initialize with 2's a new vector having size of current bit vector + amount of insertions
-			vector<uint8_t> temp(size(), 2);
+			bit_vector temp(size());
 
-			// Loop through messages, add to temporary array
+			// Mark insertion points
+			for (auto const& [bucket, item] : message_buffer) {
+				for (auto const& message : item.second) {
+					if (message.get_dirty()) {
+						continue;
+					}
+					temp[message.get_index() + (bucket * bucket_width)] = true;
+				}
+			}
+
+			// Loop through current bitvector, incrementing indices which have message insertions before them
+			uint64_t last_insertion = 0;
+			uint64_t i = 0;
+			for (const auto& val : bv) {
+				if (!temp[i]) {
+					temp[i] = val;
+					last_insertion = i;
+				}
+				else {
+					auto counter = i + 1;
+					while (temp[counter] != 0 || counter <= last_insertion) {
+						++counter;
+					}
+					temp[counter] = val;
+					last_insertion = counter;
+				}
+				++i;
+			}
+
+			// Set actual message values
 			for (auto const& [bucket, item] : message_buffer) {
 				for (auto const& message : item.second) {
 					if (message.get_dirty()) {
@@ -152,33 +193,11 @@ namespace dyn {
 				}
 			}
 
-			// Loop through current bitvector, incrementing indices which have message insertions before them
-			uint64_t i = 0;
-			for (const auto& val : bv) {
-				if (temp[i] == 2) {
-					temp[i] = val;
-				}
-				else {
-					auto counter = i + 1;
-					while (temp[counter] != -1) {
-						++counter;
-					}
-					temp[counter] = val;
-				}
-				++i;
-			}
-
 			// Clear buffer and set message count to 0
 			message_buffer.clear();
 			messages = 0;
 
-			// Initialize new bit vector with size of the temporary array
-			bv = bit_vector(temp.size());
-
-			// Add values to the new bit vector
-			for (auto i = 0; i < temp.size(); ++i) {
-				bv[i] = temp[i];
-			}
+			bv = bit_vector(std::move(temp));
 
 			// Create static support structures for the new bit vector
 			util::init_support(rs, &bv);
