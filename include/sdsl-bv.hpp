@@ -2,6 +2,7 @@
 
 #include "int_vector.hpp"
 #include "rank_support_v5.hpp"
+#include "select_support_mcl.hpp"
 #include "util.hpp"
 #include "message.hpp"
 #include <vector>
@@ -18,6 +19,7 @@ namespace dyn {
 		explicit sdsl_bv(uint64_t message_count = 0) {
 			bv = bit_vector();
 			util::init_support(rs, &bv);
+			util::init_support(ss, &bv);
 			message_buffer = map<uint64_t, pair<uint64_t, vector<message>>>();
 			message_max = message_count;
 		}
@@ -32,7 +34,6 @@ namespace dyn {
 		}
 
 		bool at(uint64_t i) const {
-
 			uint64_t bucket = i / bucket_width;
 
 			auto it = message_buffer.find(bucket);
@@ -87,23 +88,29 @@ namespace dyn {
 		}
 
 		uint64_t select(uint64_t i) const {
-			uint64_t counter = 0;
-			uint64_t index = 0;
+			uint64_t inserts = 0;
 
-			while (counter != i) {
-				if (at(index)) {
-					++counter;
+			for (auto const& [bucket, item] : message_buffer) {
+				for (auto const& message : item.second) {
+					if (message.get_dirty()) {
+						continue;
+					}
+
+					if (message.get_index() * (bucket * bucket_width) <= i && message.get_val()) {
+						++inserts;
+					}
+
+					if (inserts == i) {
+						return message.get_index() * (bucket * bucket_width) + 1;
+					}
 				}
-				++index;
 			}
-
-			return index + 1;
+			return ss.select(i - inserts);
 		}
 
 		uint64_t rank(const uint64_t i) const {
 			// Total insertions
 			uint64_t insertions = 0;
-
 			// Insertions of 1's
 			uint64_t sum = 0;
 
@@ -127,7 +134,6 @@ namespace dyn {
 					}
 				}
 			}
-
 			return rs.rank(i - insertions) + sum;
 		}
 
@@ -174,8 +180,9 @@ namespace dyn {
 				bv[i] = temp[i];
 			}
 
-			// Create static rank support structure for the new bit vector
+			// Create static support structures for the new bit vector
 			util::init_support(rs, &bv);
+			util::init_support(ss, &bv);
 		}
 
 		void add_message(const message& m) {
@@ -215,10 +222,8 @@ namespace dyn {
 						}
 					}
 				}
-
 				// Clear modifier
 				message_buffer[bucket].first = 0;
-
 				// Add message to bucket
 				it->second.second.push_back(copy);
 			}
@@ -241,6 +246,7 @@ namespace dyn {
 		uint64_t messages = 0;
 		map<uint64_t, pair<uint64_t, vector<message>>> message_buffer;
 		rank_support_v5<1, 1> rs;
+		select_support_mcl<1, 1> ss;
 		bit_vector bv;
 	};
 }
