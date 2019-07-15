@@ -24,9 +24,9 @@ int main()
 		tree->rank(i + 1);
 	}
 
-	//for (uint64_t i = 0; i < count; i++) {
-	//	tree->select(i);
-	//}
+	for (uint64_t i = 0; i < count; i++) {
+		tree->select(i);
+	}
 
 	//for (uint64_t i = 0; i < count; i++) {
 	//	tree->set(i, (i + 1) % 2);

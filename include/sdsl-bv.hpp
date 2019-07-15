@@ -86,7 +86,7 @@ namespace dyn {
 			insert(size(), x);
 		}
 
-		uint64_t select(uint64_t i) {
+		uint64_t select(uint64_t i) const {
 			uint64_t counter = 0;
 			uint64_t index = 0;
 
@@ -100,8 +100,11 @@ namespace dyn {
 			return index + 1;
 		}
 
-		uint64_t rank(const uint64_t i) {
+		uint64_t rank(const uint64_t i) const {
+			// Total insertions
 			uint64_t insertions = 0;
+
+			// Insertions of 1's
 			uint64_t sum = 0;
 
 			for (auto const& [bucket, item] : message_buffer) {
@@ -110,6 +113,7 @@ namespace dyn {
 						continue;
 					}
 
+					// Won't affect rank anymore
 					if (message.get_index() + (bucket * bucket_width) >= i) {
 						break;
 					}
@@ -117,8 +121,9 @@ namespace dyn {
 					++insertions;
 					sum += message.get_val();
 
+					// Enough insertions to answer query
 					if (insertions == i) {
-						break;
+						return sum;
 					}
 				}
 			}
@@ -128,18 +133,20 @@ namespace dyn {
 
 	private:
 		void flush_messages() {
+			// Initialize with 2's a new vector having size of current bit vector + amount of insertions
 			vector<uint8_t> temp(size(), 2);
 
+			// Loop through messages, add to temporary array
 			for (auto const& [bucket, item] : message_buffer) {
 				for (auto const& message : item.second) {
 					if (message.get_dirty()) {
 						continue;
 					}
-
 					temp[message.get_index() + (bucket * bucket_width)] = message.get_val();
 				}
 			}
 
+			// Loop through current bitvector, incrementing indices which have message insertions before them
 			uint64_t i = 0;
 			for (const auto& val : bv) {
 				if (temp[i] == 2) {
@@ -155,14 +162,19 @@ namespace dyn {
 				++i;
 			}
 
+			// Clear buffer and set message count to 0
 			message_buffer.clear();
 			messages = 0;
+
+			// Initialize new bit vector with size of the temporary array
 			bv = bit_vector(temp.size());
 
+			// Add values to the new bit vector
 			for (auto i = 0; i < temp.size(); ++i) {
 				bv[i] = temp[i];
 			}
 
+			// Create static rank support structure for the new bit vector
 			util::init_support(rs, &bv);
 		}
 
@@ -215,16 +227,18 @@ namespace dyn {
 				message_buffer.insert({ bucket, { 0, { copy } } });
 			}
 
+			// Increment message count
 			++messages;
 
+			// Flush if buffer full
 			if (messages == message_max) {
 				flush_messages();
 			}
 		}
 
-		uint64_t messages = 0;
 		uint64_t message_max;
 		uint64_t bucket_width = 4;
+		uint64_t messages = 0;
 		map<uint64_t, pair<uint64_t, vector<message>>> message_buffer;
 		rank_support_v5<1, 1> rs;
 		bit_vector bv;
