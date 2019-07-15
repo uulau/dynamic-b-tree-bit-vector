@@ -128,7 +128,7 @@ namespace dyn {
 
 	private:
 		void flush_messages() {
-			vector<uint64_t> temp(size(), -1);
+			vector<uint8_t> temp(size(), 2);
 
 			for (auto const& [bucket, item] : message_buffer) {
 				for (auto const& message : item.second) {
@@ -140,17 +140,19 @@ namespace dyn {
 				}
 			}
 
-			for (int i = 0; i < bv.size(); ++i) {
-				if (temp[i] == -1) {
-					temp[i] = bv[i];
+			uint64_t i = 0;
+			for (const auto& val : bv) {
+				if (temp[i] == 2) {
+					temp[i] = val;
 				}
 				else {
 					auto counter = i + 1;
 					while (temp[counter] != -1) {
 						++counter;
 					}
-					temp[counter] = bv[i];
+					temp[counter] = val;
 				}
+				++i;
 			}
 
 			message_buffer.clear();
