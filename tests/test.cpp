@@ -8,7 +8,7 @@
 
 typedef b_bv<packed_vector, b_node> bbv;
 typedef b_bv<packed_vector, be_node> bebv;
-typedef sdsl_bv sdslbv;
+typedef sdsl_bv<16> sdslbv;
 
 TEST(BEBV, Insertion10) {
 	insert_test<bebv>(10);

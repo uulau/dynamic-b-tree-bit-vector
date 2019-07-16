@@ -10,7 +10,7 @@ int main()
 {
 	auto const count = 1000000;
 
-	auto tree = new sdsl_bv(uint64_t(256));
+	auto tree = new sdsl_bv<8>(uint64_t(64));
 
 	for (uint64_t i = 0; i < count; i++) {
 		tree->insert(i, i % 2);
@@ -24,8 +24,8 @@ int main()
 		tree->rank(i + 1);
 	}
 
-	for (uint64_t i = 0; i < count; i++) {
-		tree->select(i);
+	for (uint64_t i = 0; i < count / 2; i++) {
+		tree->select(i + 1);
 	}
 
 	//for (uint64_t i = 0; i < count; i++) {
