@@ -44,7 +44,7 @@ namespace dyn {
 
 			uint64_t select(uint64_t i, bool b = true) const {
 				assert(b ? i < rank(size(), true) : i < rank(size(), false));
-				return b ? search(i + 1) : search_0(i + 1);
+				return b ? search(i) : search_0(i);
 			}
 
 			/*

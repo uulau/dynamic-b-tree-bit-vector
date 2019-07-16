@@ -64,7 +64,7 @@ template <class T> void select_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	for (uint64_t i = 1; i <= size / 2; i++) {
 		auto val = tree->select(i);
-		EXPECT_EQ((i - 1) * 2 + 1, val);
+		EXPECT_EQ((i - 1) * 2 - 1, val);
 		if ((i - 1) * 2 != val)
 		{
 			break;
