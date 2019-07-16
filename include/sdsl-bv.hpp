@@ -6,6 +6,7 @@
 #include "util.hpp"
 #include "message.hpp"
 #include <vector>
+#include <climits>
 
 using namespace sdsl;
 using namespace std;
@@ -60,11 +61,11 @@ namespace dyn {
 			}
 
 			void remove(const uint64_t i) {
-				add_message(remove_message(i, at(i)));
+				add_message<message_type::remove>(remove_message(i, at(i)));
 			}
 
 			void remove(const uint64_t i, const uint64_t val) {
-				add_message(remove_message(i, val));
+				add_message<message_type::remove>(remove_message(i, val));
 			}
 
 			uint64_t size() const {
@@ -89,7 +90,7 @@ namespace dyn {
 			}
 
 			void insert(const uint64_t i, const bool x) {
-				add_message(insert_message(i, x));
+				add_message<message_type::insert>(insert_message(i, x));
 			}
 
 			void set(const uint64_t i, const bool x) {
@@ -153,7 +154,6 @@ namespace dyn {
 							continue;
 						}
 
-						// Won't affect rank anymore
 						if (message.get_index() + bucket_mul(bucket) >= i) {
 							continue;
 						}
@@ -184,7 +184,7 @@ namespace dyn {
 					}
 				}
 
-				// Loop through current bitvector, incrementing indices which have message insertions before them
+				// Loop through current bit vector, incrementing indices which have message insertions before them
 				uint64_t last_insertion = 0;
 				uint64_t i = 0;
 				for (const auto& val : bv) {
@@ -224,7 +224,7 @@ namespace dyn {
 				util::init_support(ss, &bv);
 			}
 
-			void add_message(const message& m) {
+			template <message_type type> void add_message(const message& m) {
 				// Calculate bucket and index inside bucket
 				auto bucket = bucket_div(m.get_index());
 				const auto index = bucket_mod(m.get_index());
@@ -238,39 +238,38 @@ namespace dyn {
 				// Try to find bucket
 				auto it = message_buffer.find(bucket);
 
-				if (it != message_buffer.end()) {
-					// Bucket found, increment existing message indices by modifier and push greater indices
-					// than current message to the right by one
-					for (auto& curr_mes : message_buffer[bucket].second) {
-						const auto increment = curr_mes.get_index() >= copy.get_index() ? message_buffer[bucket].first + 1 : message_buffer[bucket].first;
-						curr_mes.set_index(curr_mes.get_index() + increment);
+				// Create new bucket if not found
+				if (it == message_buffer.end())
+				{
+					message_buffer.insert({ bucket, { 0, { } } });
+				}
 
-						// Overflow, set index to actual value and readd, mark old as dirty
-						if (curr_mes.get_index() >= bucket_width) {
-							curr_mes.set_index(curr_mes.get_index() + bucket_mul(bucket));
-							auto new_mes = curr_mes;
-							// Will create new buckets, if needed
-							add_message(new_mes);
-							curr_mes.set_dirty(true);
-						}
+				// Bucket found, increment existing message indices by modifier and push greater indices
+				// than current message to the right by one
+				for (auto& curr_mes : message_buffer[bucket].second) {
+					const auto increment = curr_mes.get_index() >= copy.get_index() ? message_buffer[bucket].first + 1 : message_buffer[bucket].first;
+					curr_mes.set_index(curr_mes.get_index() + increment);
 
-						// Increment higher bucket modifiers
-						for (auto& [index, val] : message_buffer) {
-							if (index > bucket) {
-								++(val.first);
-							}
+					// Overflow, set index to actual value and add again, mark old as dirty
+					if (curr_mes.get_index() >= bucket_width) {
+						curr_mes.set_index(curr_mes.get_index() + bucket_mul(bucket));
+						auto new_mes = curr_mes;
+						// Will create new buckets, if needed
+						add_message<message_type::insert>(new_mes);
+						curr_mes.set_dirty(true);
+					}
+
+					// Increment higher bucket modifiers
+					for (auto& [index, val] : message_buffer) {
+						if (index > bucket) {
+							++(val.first);
 						}
 					}
-					// Clear modifier
-					message_buffer[bucket].first = 0;
-					// Add message to bucket
-					it->second.second.push_back(copy);
 				}
-				else {
-					// Message not found, create new bucket and a modifier
-					message_buffer.insert({ bucket, { 0, { copy } } });
-				}
-
+				// Clear modifier
+				message_buffer[bucket].first = 0;
+				// Add message to bucket
+				message_buffer[bucket].second.push_back(copy);
 				// Increment message count
 				++messages;
 
@@ -294,15 +293,15 @@ namespace dyn {
 
 			static constexpr uint64_t bucket_log = ilog2(bucket_width);
 
-			static constexpr uint64_t bucket_mul(uint64_t num) {
+			static constexpr uint64_t bucket_mul(const uint64_t num) {
 				return num << bucket_log;
 			}
 
-			static constexpr uint64_t bucket_div(uint64_t num) {
+			static constexpr uint64_t bucket_div(const uint64_t num) {
 				return num >> bucket_log;
 			}
 
-			static constexpr uint64_t bucket_mod(uint64_t num) {
+			static constexpr uint64_t bucket_mod(const uint64_t num) {
 				return num & (bucket_width - 1);
 			}
 
