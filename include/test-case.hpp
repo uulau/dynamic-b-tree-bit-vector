@@ -103,7 +103,7 @@ template<class K> void execute_test(const vector<message>& messages, K& tree) {
 			tree.set(message.get_index(), message.get_val());
 		}
 		else if (message.get_type() == message_type::rank) {
-			tree.rank(message.get_index(), message.get_val());
+			tree.rank(message.get_index());
 		}
 		else {
 			throw "Invalid message type.";

@@ -13,6 +13,12 @@ using namespace std;
 using namespace dyn;
 
 namespace dyn {
+	struct buffer_item
+	{
+		uint64_t counter;
+		vector<message> message_vector;
+	};
+
 	template<
 		uint64_t bucket_width
 	>
@@ -31,7 +37,7 @@ namespace dyn {
 				bv = bit_vector();
 				util::init_support(rs, &bv);
 				util::init_support(ss, &bv);
-				message_buffer = map<uint64_t, pair<uint64_t, vector<message>>>();
+				message_buffer = map<uint64_t, buffer_item>();
 				message_max = message_count;
 			}
 
@@ -44,13 +50,17 @@ namespace dyn {
 				return at(i);
 			}
 
-			bool at(uint64_t i) const {
+			bool at(const uint64_t i) const {
 				const auto bucket = bucket_div(i);
 
 				auto it = message_buffer.find(bucket);
-
 				if (it != message_buffer.end()) {
-					for (const auto& message : it->second.second) {
+					for (const auto& message : it->second.message_vector) {
+						if (message.get_dirty())
+						{
+							continue;
+						}
+
 						if (bucket_mul(bucket) + message.get_index() == i) {
 							return message.get_val();
 						}
@@ -61,28 +71,23 @@ namespace dyn {
 			}
 
 			void remove(const uint64_t i) {
-				add_message<message_type::remove>(remove_message(i, at(i)));
+				add_message(remove_message(i, at(i)));
 			}
 
 			void remove(const uint64_t i, const uint64_t val) {
-				add_message<message_type::remove>(remove_message(i, val));
+				add_message(remove_message(i, val));
 			}
 
 			uint64_t size() const {
 				uint64_t counter = 0;
 
 				for (auto const& [index, val] : message_buffer) {
-					for (auto const& message : val.second) {
+					for (auto const& message : val.message_vector) {
 						if (message.get_dirty()) {
 							continue;
 						}
 
-						if (message.get_type() == message_type::insert) {
-							++counter;
-						}
-						else if (message.get_type() == message_type::remove) {
-							--counter;
-						}
+						++counter;
 					}
 				}
 
@@ -90,7 +95,7 @@ namespace dyn {
 			}
 
 			void insert(const uint64_t i, const bool x) {
-				add_message<message_type::insert>(insert_message(i, x));
+				add_message(insert_message(i, x));
 			}
 
 			void set(const uint64_t i, const bool x) {
@@ -118,7 +123,7 @@ namespace dyn {
 				const auto original = initialized ? ss.select(i) : 0;
 
 				for (auto const& [bucket, item] : message_buffer) {
-					for (auto const& message : item.second) {
+					for (auto const& message : item.message_vector) {
 						if (message.get_dirty()) {
 							continue;
 						}
@@ -149,7 +154,7 @@ namespace dyn {
 				uint64_t sum = 0;
 
 				for (auto const& [bucket, item] : message_buffer) {
-					for (auto const& message : item.second) {
+					for (auto const& message : item.message_vector) {
 						if (message.get_dirty()) {
 							continue;
 						}
@@ -176,7 +181,7 @@ namespace dyn {
 
 				// Mark insertion points
 				for (auto const& [bucket, item] : message_buffer) {
-					for (auto const& message : item.second) {
+					for (auto const& message : item.message_vector) {
 						if (message.get_dirty()) {
 							continue;
 						}
@@ -205,7 +210,7 @@ namespace dyn {
 
 				// Set actual message values
 				for (auto const& [bucket, item] : message_buffer) {
-					for (auto const& message : item.second) {
+					for (auto const& message : item.message_vector) {
 						if (message.get_dirty()) {
 							continue;
 						}
@@ -224,7 +229,7 @@ namespace dyn {
 				util::init_support(ss, &bv);
 			}
 
-			template <message_type type> void add_message(const message& m) {
+			void add_message(const message& m) {
 				// Calculate bucket and index inside bucket
 				auto bucket = bucket_div(m.get_index());
 				const auto index = bucket_mod(m.get_index());
@@ -246,8 +251,13 @@ namespace dyn {
 
 				// Bucket found, increment existing message indices by modifier and push greater indices
 				// than current message to the right by one
-				for (auto& curr_mes : message_buffer[bucket].second) {
-					const auto increment = curr_mes.get_index() >= copy.get_index() ? message_buffer[bucket].first + 1 : message_buffer[bucket].first;
+				for (auto& curr_mes : message_buffer[bucket].message_vector) {
+					if (curr_mes.get_dirty())
+					{
+						continue;
+					}
+
+					const auto increment = curr_mes.get_index() >= copy.get_index() ? message_buffer[bucket].counter + 1 : message_buffer[bucket].counter;
 					curr_mes.set_index(curr_mes.get_index() + increment);
 
 					// Overflow, set index to actual value and add again, mark old as dirty
@@ -255,21 +265,21 @@ namespace dyn {
 						curr_mes.set_index(curr_mes.get_index() + bucket_mul(bucket));
 						auto new_mes = curr_mes;
 						// Will create new buckets, if needed
-						add_message<message_type::insert>(new_mes);
+						add_message(new_mes);
 						curr_mes.set_dirty(true);
 					}
 
 					// Increment higher bucket modifiers
 					for (auto& [index, val] : message_buffer) {
 						if (index > bucket) {
-							++(val.first);
+							++(val.counter);
 						}
 					}
 				}
 				// Clear modifier
-				message_buffer[bucket].first = 0;
+				message_buffer[bucket].counter = 0;
 				// Add message to bucket
-				message_buffer[bucket].second.push_back(copy);
+				message_buffer[bucket].message_vector.push_back(copy);
 				// Increment message count
 				++messages;
 
@@ -307,7 +317,7 @@ namespace dyn {
 
 			uint64_t messages = 0;
 			uint64_t message_max;
-			map<uint64_t, pair<uint64_t, vector<message>>> message_buffer;
+			map<uint64_t, buffer_item> message_buffer;
 			rank_support_v5<1, 1> rs;
 			select_support_mcl<1, 1> ss;
 			bit_vector bv;

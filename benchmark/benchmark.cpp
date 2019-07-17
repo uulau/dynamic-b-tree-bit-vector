@@ -8,6 +8,7 @@
 #include "int_vector.hpp"
 #include "rank_support_v5.hpp"
 #include "util.hpp"
+#include "sdsl-bv.hpp"
 
 typedef b_bv<packed_vector, b_node> bbv;
 typedef b_bv<packed_vector, be_node> bebv;
@@ -25,8 +26,9 @@ static int64_t const leaf_multiplier = 4;
 static int64_t const buffer_min = 4;
 static int64_t const buffer_max = 16;
 static int64_t const buffer_multiplier = 2;
+static int64_t const sdsl_max = 8196;
 
-static uint64_t data_size = 100000;
+static uint64_t data_size = 10000;
 
 static void be_tree(benchmark::internal::Benchmark* benchmark) {
 	for (auto b = branching_min; b <= branching_max; b *= branching_multiplier)
@@ -53,7 +55,7 @@ static void b_tree(benchmark::internal::Benchmark* benchmark) {
 
 static void sdsl_tree(benchmark::internal::Benchmark* benchmark) {
 
-	for (auto buffer = buffer_min; buffer <= buffer_max; buffer *= buffer_multiplier)
+	for (auto buffer = buffer_min; buffer <= sdsl_max; buffer *= buffer_multiplier)
 	{
 		benchmark->Args({ no_value, no_value, buffer });
 	}
@@ -138,8 +140,13 @@ template <class T> static void Query(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Query, bbv)->Apply(b_tree);
-BENCHMARK_TEMPLATE(Query, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<64>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<128>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<256>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<512>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<1024>)->Apply(sdsl_tree);
+//BENCHMARK_TEMPLATE(Query, bbv)->Apply(b_tree);
+//BENCHMARK_TEMPLATE(Query, bebv)->Apply(be_tree);
 
 template <class T> static void Insertion(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -151,8 +158,13 @@ template <class T> static void Insertion(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Insertion, bbv)->Apply(b_tree);
-BENCHMARK_TEMPLATE(Insertion, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<64>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<128>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<256>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<512>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<1024>)->Apply(sdsl_tree);
+//BENCHMARK_TEMPLATE(Insertion, bbv)->Apply(b_tree);
+//BENCHMARK_TEMPLATE(Insertion, bebv)->Apply(be_tree);
 
 template <class T> static void Deletion(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -177,8 +189,8 @@ template <class T> static void Deletion(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Deletion, bbv)->Apply(b_tree);
-BENCHMARK_TEMPLATE(Deletion, bebv)->Apply(be_tree);
+//BENCHMARK_TEMPLATE(Deletion, bbv)->Apply(b_tree);
+//BENCHMARK_TEMPLATE(Deletion, bebv)->Apply(be_tree);
 
 template <class T> static void Rank(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -198,8 +210,13 @@ template <class T> static void Rank(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Rank, bbv)->Apply(b_tree);
-BENCHMARK_TEMPLATE(Rank, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<64>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<128>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<256>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<512>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<1024>)->Apply(sdsl_tree);
+//BENCHMARK_TEMPLATE(Rank, bbv)->Apply(b_tree);
+//BENCHMARK_TEMPLATE(Rank, bebv)->Apply(be_tree);
 
 template <class T> static void Select(benchmark::State& state) {
 	T tree(state.range(0), state.range(1), state.range(2));
@@ -208,19 +225,24 @@ template <class T> static void Select(benchmark::State& state) {
 		tree.push_back(true);
 	}
 
-	uint64_t index = 0;
+	uint64_t index = 1;
 	for (auto _ : state) {
 		tree.select(index);
 		++index;
-		if (index == data_size)
+		if (index == data_size / 2)
 		{
-			index = 0;
+			index = 1;
 		}
 	}
 }
 
-BENCHMARK_TEMPLATE(Select, bbv)->Apply(b_tree);
-BENCHMARK_TEMPLATE(Select, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<64>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<128>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<256>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<512>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<1024>)->Apply(sdsl_tree);
+//BENCHMARK_TEMPLATE(Select, bbv)->Apply(b_tree);
+//BENCHMARK_TEMPLATE(Select, bebv)->Apply(be_tree);
 
 template <class T> static void Operations(benchmark::State& state) {
 	auto messages = generate_ram_test(10000000, 10);
@@ -231,8 +253,13 @@ template <class T> static void Operations(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Operations, bbv)->Apply(b_tree);
-BENCHMARK_TEMPLATE(Operations, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<64>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<128>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<256>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<512>)->Apply(sdsl_tree);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<1024>)->Apply(sdsl_tree);
+//BENCHMARK_TEMPLATE(Operations, bbv)->Apply(b_tree);
+//BENCHMARK_TEMPLATE(Operations, bebv)->Apply(be_tree);
 
 int main(int argc, char** argv)
 {
