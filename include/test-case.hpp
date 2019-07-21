@@ -9,26 +9,49 @@
 using namespace std;
 using namespace dyn;
 
-void generate_test(uint64_t operations, int ratio) {
+struct test_message
+{
+	enum message_type
+	{
+		insert = 0,
+		rank = 1
+	};
+
+	message_type type;
+	uint64_t index;
+	bool val;
+
+	static test_message insert_message(uint64_t i, bool v)
+	{
+		return test_message{ insert, i , v };
+	}
+
+	static test_message rank_message(uint64_t i)
+	{
+		return test_message{ rank, i, 0 };
+	}
+};
+
+inline void generate_test(const uint64_t operations, const int ratio) {
 	assert(operations > 0);
 
-	double insert_ratio = (float)ratio / (float)100;
+	const double insert_ratio = float(ratio) / float(100);
 
 	// Seed random number generator with time
 	srand(time(0));
 	auto insert_counter = 0;
 	ofstream file("..\\test-" + to_string(operations) + "-" + to_string(ratio) + ".txt");
 	for (uint64_t i = 0; i < operations; i++) {
-		auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
+		const auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
 		if (file.is_open()) {
 			if (insert) {
-				auto position = rand() % (insert_counter + 1);
-				auto bit = rand() % 2;
+				const auto position = rand() % (insert_counter + 1);
+				const auto bit = rand() % 2;
 				file << "INSERT " << position << " " << bit << '\n';
 				insert_counter++;
 			}
 			else {
-				auto position = rand() % (insert_counter);
+				const auto position = rand() % (insert_counter);
 				file << "RANK " << position << '\n';
 			}
 		}
@@ -36,7 +59,8 @@ void generate_test(uint64_t operations, int ratio) {
 	file.close();
 }
 
-const vector<message> read_test() {
+inline vector<message> read_test()
+{
 	vector<message> messages;
 	ifstream file("..\\test.txt");
 
@@ -66,44 +90,39 @@ const vector<message> read_test() {
 	return messages;
 }
 
-const vector<message> generate_ram_test(uint64_t operations, int ratio) {
+inline vector<test_message> generate_ram_test(const uint64_t operations, const int ratio)
+{
 	assert(operations > 0);
 
-	double insert_ratio = (float)ratio / (float)100;
+	const double insert_ratio = float(ratio) / float(100);
 
-	auto messages = vector<message>();
+	auto messages = vector<test_message>();
 	// Seed random number generator with time
-	srand(time(0));
+	srand(time(nullptr));
 	auto insert_counter = 0;
 	for (uint64_t i = 0; i < operations; i++) {
-		auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
+		const auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
 		if (insert) {
 			const auto position = rand() % (insert_counter + 1);
 			const auto bit = rand() % 2;
-			messages.push_back(insert_message(position, bit));
+			messages.push_back(test_message::insert_message(position, bit));
 			insert_counter++;
 		}
 		else {
 			const auto position = rand() % (insert_counter);
-			messages.push_back(rank_message(position + 1));
+			messages.push_back(test_message::rank_message(position + 1));
 		}
 	}
 	return messages;
 }
 
-template<class K> void execute_test(const vector<message>& messages, K& tree) {
+template<class K> void execute_test(const vector<test_message>& messages, K& tree) {
 	for (const auto& message : messages) {
-		if (message.get_type() == message_type::insert) {
-			tree.insert(message.get_index(), message.get_val());
+		if (message.type == test_message::message_type::insert) {
+			tree.insert(message.index, message.val);
 		}
-		else if (message.get_type() == message_type::remove) {
-			tree.remove(message.get_index());
-		}
-		else if (message.get_type() == message_type::update) {
-			tree.set(message.get_index(), message.get_val());
-		}
-		else if (message.get_type() == message_type::rank) {
-			tree.rank(message.get_index());
+		else if (message.type == test_message::message_type::rank) {
+			tree.rank(message.index);
 		}
 		else {
 			throw "Invalid message type.";

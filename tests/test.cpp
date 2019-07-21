@@ -1,14 +1,14 @@
 #include "gtest.h"
 #include "helpers.hpp"
-#include "b-bv.hpp"
+#include "succinct-bitvector.hpp"
 #include "packed_vector.hpp"
-#include "be-node.hpp"
-#include "b-node.hpp"
+#include "b-spsi.hpp"
+#include "be-spsi.hpp"
 #include "sdsl-bv.hpp"
 
-typedef b_bv<packed_vector, b_node> bbv;
-typedef b_bv<packed_vector, be_node> bebv;
-typedef sdsl_bv<16> sdslbv;
+typedef succinct_bitvector<packed_vector, 256, 16, 0, b_spsi> bbv;
+typedef succinct_bitvector<packed_vector, 256, 16, 16, be_spsi> bebv;
+typedef sdsl_bv<64, 256> sdslbv;
 
 TEST(BEBV, Insertion10) {
 	insert_test<bebv>(10);
@@ -298,53 +298,53 @@ TEST(SDSLBV, Rank1000000) {
 	rank_test<sdslbv>(1000000);
 }
 
-TEST(SDSLBV, Remove10) {
-	remove_test<sdslbv>(10);
-}
+//TEST(SDSLBV, Remove10) {
+//	remove_test<sdslbv>(10);
+//}
+//
+//TEST(SDSLBV, Remove100) {
+//	remove_test<sdslbv>(100);
+//}
+//
+//TEST(SDSLBV, Remove1000) {
+//	remove_test<sdslbv>(1000);
+//}
+//
+//TEST(SDSLBV, Remove10000) {
+//	remove_test<sdslbv>(10000);
+//}
+//
+//TEST(SDSLBV, Remove100000) {
+//	remove_test<sdslbv>(100000);
+//}
+//
+//TEST(SDSLBV, Remove1000000) {
+//	remove_test<sdslbv>(1000000);
+//}
 
-TEST(SDSLBV, Remove100) {
-	remove_test<sdslbv>(100);
-}
-
-TEST(SDSLBV, Remove1000) {
-	remove_test<sdslbv>(1000);
-}
-
-TEST(SDSLBV, Remove10000) {
-	remove_test<sdslbv>(10000);
-}
-
-TEST(SDSLBV, Remove100000) {
-	remove_test<sdslbv>(100000);
-}
-
-TEST(SDSLBV, Remove1000000) {
-	remove_test<sdslbv>(1000000);
-}
-
-TEST(SDSLBV, Update10) {
-	update_test<sdslbv>(10);
-}
-
-TEST(SDSLBV, Update100) {
-	update_test<sdslbv>(100);
-}
-
-TEST(SDSLBV, Update1000) {
-	update_test<sdslbv>(1000);
-}
-
-TEST(SDSLBV, Update10000) {
-	update_test<sdslbv>(10000);
-}
-
-TEST(SDSLBV, Update100000) {
-	update_test<sdslbv>(100000);
-}
-
-TEST(SDSLBV, Update1000000) {
-	update_test<sdslbv>(1000000);
-}
+//TEST(SDSLBV, Update10) {
+//	update_test<sdslbv>(10);
+//}
+//
+//TEST(SDSLBV, Update100) {
+//	update_test<sdslbv>(100);
+//}
+//
+//TEST(SDSLBV, Update1000) {
+//	update_test<sdslbv>(1000);
+//}
+//
+//TEST(SDSLBV, Update10000) {
+//	update_test<sdslbv>(10000);
+//}
+//
+//TEST(SDSLBV, Update100000) {
+//	update_test<sdslbv>(100000);
+//}
+//
+//TEST(SDSLBV, Update1000000) {
+//	update_test<sdslbv>(1000000);
+//}
 
 TEST(SDSLBV, Select10) {
 	select_test<sdslbv>(10);

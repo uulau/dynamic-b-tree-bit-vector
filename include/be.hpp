@@ -203,7 +203,7 @@ namespace dyn {
 
 			assert(i < size());
 
-			uint32_t j = get<0>(subtree_size_bound<true>(i));
+			uint32_t j = subtree_size_bound<true>(i);
 
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
@@ -225,16 +225,16 @@ namespace dyn {
 		/*
 		 * returns sum up to i-th integer included
 		 */
-		uint64_t psum(uint64_t i, uint32_t offset = 0) {
+		uint64_t psum(uint64_t i) {
 
+			auto d = size();
 			assert(i < size());
 
-			auto val = subtree_size_bound<true>(i);
-			uint32_t j = get<0>(val);
+			auto j = subtree_size_bound<true>(i);
 
 			//size/psum stored in previous counter
-			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
-			uint64_t previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
+			const auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+			auto previous_psum = (j == 0 ? 0 : subtree_psums[j - 1]);
 
 			assert(i >= previous_size);
 
@@ -248,7 +248,7 @@ namespace dyn {
 			}
 
 			//else: recurse on children
-			return previous_psum + children[j]->psum(i - (previous_size + get<1>(val) + offset));
+			return previous_psum + children[j]->psum(i - previous_size);
 
 		}
 
@@ -374,8 +374,6 @@ namespace dyn {
 
 			bs += message_buffer.size() * sizeof(message) * 8;
 
-			bs += 2 * sizeof(uint64_t) * 8;
-
 			if (has_leaves()) {
 
 				for (uint64_t i = 0; i < nr_children; ++i) {
@@ -429,7 +427,7 @@ namespace dyn {
 		be_node() = delete;
 
 		uint64_t psum() {
-			uint64_t psum = 0;
+			int64_t psum = 0;
 
 			for (const auto& message : message_buffer) {
 				switch (message.get_type()) {
@@ -485,7 +483,7 @@ namespace dyn {
 		void increment_item(uint64_t i, bool delta) {
 			assert(i < size());
 
-			uint32_t j = get<0>(subtree_size_bound<true>(i));
+			uint32_t j = subtree_size_bound<true>(i);
 
 			//size stored in previous counter
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
@@ -669,7 +667,7 @@ namespace dyn {
 			assert(this->can_lose());
 			//assert(i < this->size_no_messages());
 
-			uint32_t j = get<0>(subtree_size_bound<true>(i));
+			uint32_t j = subtree_size_bound<true>(i);
 
 			//size stored in previous counter
 			uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
@@ -704,8 +702,8 @@ namespace dyn {
 						m.set_dirty(true);
 
 						uint32_t j = curr_message.get_type() == message_type::insert
-							? get<0>(subtree_size_bound<false>(curr_message.get_index()))
-							: get<0>(subtree_size_bound<true>(curr_message.get_index()));
+							? subtree_size_bound<false>(curr_message.get_index())
+							: subtree_size_bound<true>(curr_message.get_index());
 
 						switch (m.get_type()) {
 						case message_type::insert: {
@@ -731,7 +729,7 @@ namespace dyn {
 						default: throw;
 						}
 
-						auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+						const auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
 						curr_message.set_index(curr_message.get_index() - previous_size);
 
@@ -767,64 +765,67 @@ namespace dyn {
 			return new_root;
 		}
 
-		template <bool upper> std::pair<uint32_t, uint32_t> subtree_size_bound(uint32_t i) {
+		template <bool upper> uint32_t subtree_size_bound(const uint32_t i) {
 			assert(subtree_sizes.size());
 
-			std::vector<uint64_t> temp(subtree_sizes);
+			auto copy = subtree_sizes;
 
-			for (const auto& m : message_buffer) {
-
-				auto i = m.get_index();
-				uint32_t k = 0;
+			for (const auto& m : message_buffer)
+			{
+				auto t = 0;
 
 				if (m.get_type() != message_type::insert) {
-					while (temp[k] <= i) {
-						k++;
+					while (copy[t] <= i) {
+						++t;
 					}
 				}
 				else {
-					while (temp[k] < i) {
-						k++;
+					while (copy[t] < i) {
+						++t;
 					}
 				}
 
 				switch (m.get_type()) {
 				case message_type::insert: {
-					for (auto t = k; t < nr_children; t++) {
-						++temp[t];
+					for (auto k = t; k < nr_children; ++k) {
+						++copy[k];
+						//subtree_psums[k] += m.get_val();
 					}
 					break;
 				}
 				case message_type::remove: {
-					for (auto t = k; t < nr_children; t++) {
-						--temp[t];
+					for (auto k = t; k < nr_children; ++k) {
+						--copy[k];
+						//subtree_psums[k] -= m.get_val();
 					}
 					break;
 				}
-				default: continue;
+				case message_type::update: {
+					for (auto k = t; k < nr_children; ++k) {
+						//m.get_val() ? ++subtree_psums[k] : --subtree_psums[k];
+					}
+					break;
 				}
-			}
-
-			if (i == temp[nr_children - 1]) {
-				return make_pair(nr_children - 1, temp[nr_children - 1] - subtree_sizes[nr_children - 1]);
+				default: throw;
+				}
 			}
 
 			uint32_t j = 0;
 
 			if constexpr (upper) {
-				while (temp[j] <= i) {
-					j++;
-					assert(j <= temp.size());
+				while (copy[j] <= i) {
+					++j;
+					assert(j <= subtree_sizes.size());
 				}
 			}
 			else {
-				while (temp[j] < i) {
-					j++;
-					assert(j < temp.size());
+				while (copy[j] < i) {
+					++j;
+					assert(j < subtree_sizes.size());
 				}
 			}
 
-			return make_pair(j, temp[j] - subtree_sizes[j]);
+			return j;
 		}
 
 		void init_message_buffer(uint64_t message_count) {

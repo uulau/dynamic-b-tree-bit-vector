@@ -1,7 +1,8 @@
 #include "packed_vector.hpp"
-#include "b-bv.hpp"
+#include "succinct-bitvector.hpp"
 #include "sdsl-bv.hpp"
-#include "be-node.hpp"
+#include "be-spsi.hpp"
+#include "b-spsi.hpp"
 
 using namespace std;
 using namespace dyn;
@@ -10,7 +11,7 @@ int main()
 {
 	auto const count = 1000000;
 
-	auto tree = new sdsl_bv<8>(uint64_t(64));
+	auto tree = new succinct_bitvector<packed_vector, 16, 254, 0, b_spsi>();
 
 	for (uint64_t i = 0; i < count; i++) {
 		tree->insert(i, i % 2);
@@ -28,13 +29,13 @@ int main()
 		tree->select(i + 1);
 	}
 
-	//for (uint64_t i = 0; i < count; i++) {
-	//	tree->set(i, (i + 1) % 2);
-	//}
+	for (uint64_t i = 0; i < count; i++) {
+		tree->set(i, (i + 1) % 2);
+	}
 
-	//for (uint64_t i = 0; i < count; i++) {
-	//	tree->remove(0);
-	//}
+	for (uint64_t i = 0; i < count; i++) {
+		tree->remove(0);
+	}
 
 	delete tree;
 }

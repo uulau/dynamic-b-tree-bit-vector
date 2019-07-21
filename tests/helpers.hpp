@@ -1,7 +1,7 @@
 #pragma once
 
 template<class T> T* generate_tree(uint64_t amount) {
-	auto tree = new T(2, 64, 256);
+	auto tree = new T();
 
 	for (uint64_t i = 0; i < amount; i++) {
 		tree->push_back(i % 2);

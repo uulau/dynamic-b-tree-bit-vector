@@ -20,28 +20,21 @@ namespace dyn {
 	};
 
 	template<
-		uint64_t bucket_width
+		uint64_t bucket_width,
+		uint64_t message_count
 	>
 		class sdsl_bv {
 		static_assert(bucket_width > 2);
 		static_assert((bucket_width& (bucket_width - 1)) == 0);
+		static_assert(message_count > 0);
 
 		public:
-			sdsl_bv() = delete;
-
-			explicit sdsl_bv(const uint64_t message_count) {
-				if (message_count <= 0) {
-					throw invalid_argument("Buffer size limit must be a positive integer.");
-				}
-
+			explicit sdsl_bv() {
 				bv = bit_vector();
 				util::init_support(rs, &bv);
 				util::init_support(ss, &bv);
 				message_buffer = map<uint64_t, buffer_item>();
 				message_max = message_count;
-			}
-
-			explicit sdsl_bv(uint32_t B, uint32_t B_LEAF, uint64_t message_count) : sdsl_bv(message_count) {
 			}
 
 			~sdsl_bv() = default;
@@ -222,20 +215,20 @@ namespace dyn {
 				message_buffer.clear();
 				messages = 0;
 
+
 				bv = bit_vector(std::move(temp));
 
-				// Create static support structures for the new bit vector
 				util::init_support(rs, &bv);
 				util::init_support(ss, &bv);
 			}
 
-			void add_message(const message& m) {
+			void add_message(const message& m, const bool postpone_flush = false) {
 				// Calculate bucket and index inside bucket
 				auto bucket = bucket_div(m.get_index());
 				const auto index = bucket_mod(m.get_index());
 
 				// Copy for modifying
-				message copy = m;
+				auto copy = m;
 
 				// Set index to value inside bucket
 				copy.set_index(index);
@@ -265,7 +258,7 @@ namespace dyn {
 						curr_mes.set_index(curr_mes.get_index() + bucket_mul(bucket));
 						auto new_mes = curr_mes;
 						// Will create new buckets, if needed
-						add_message(new_mes);
+						add_message(new_mes, true);
 						curr_mes.set_dirty(true);
 					}
 
@@ -283,9 +276,11 @@ namespace dyn {
 				// Increment message count
 				++messages;
 
-				// Flush if buffer full
-				if (messages == message_max) {
-					flush_messages();
+				if (!postpone_flush) {
+					// Flush if buffer full
+					if (messages == message_max) {
+						flush_messages();
+					}
 				}
 			}
 

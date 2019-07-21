@@ -224,9 +224,15 @@ namespace dyn {
 			return s == x;
 		}
 
-		void increment(uint64_t i, bool val) {
+		void increment(uint64_t i, bool val, bool subtract = false) {
 
 			assert(i < size_);
+
+			if (subtract)
+			{
+				set<false>(i, false);
+				return;
+			}
 
 			set<false>(i, val);
 			val ? psum_++ : psum_--;
