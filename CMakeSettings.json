@@ -65,7 +65,8 @@
       "inheritEnvironments": [ "linux_x64" ],
       "wslPath": "${defaultWSLPath}",
       "addressSanitizerRuntimeFlags": "detect_leaks=0",
-      "variables": []
+      "variables": [],
+      "addressSanitizerEnabled": true
     },
     {
       "name": "x64-Release",

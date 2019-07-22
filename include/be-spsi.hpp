@@ -19,6 +19,7 @@
  *
  */
 #pragma once
+#include "../../../../../Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.21.27702/include/iso646.h"
 
 using namespace std;
 
@@ -178,7 +179,7 @@ namespace dyn {
 			void insert(uint64_t i, uint64_t x) {
 				assert(i <= root->size());
 
-				node* new_root = root->insert(i, x);
+				node* new_root = root->create_message(insert_message(i, x));
 
 				if (new_root != NULL) {
 					root = new_root;
@@ -896,30 +897,30 @@ namespace dyn {
 					if (message_buffer_is_full()) {
 						uint64_t index = 0;
 						while (index < message_buffer.size()) {
-							message curr_message = message_buffer[index];
-							message& m = message_buffer[index];
+							auto curr_message = message_buffer[index];
+							auto& m = message_buffer[index];
 
 							m.set_dirty(true);
 
-							uint32_t j = find_child(curr_message.get_index());
+							uint32_t j = subtree_sizes[nr_children - 1] != curr_message.get_index() ? find_child(curr_message.get_index()) : nr_children - 1;
 
 							switch (m.get_type()) {
 							case message_type::insert: {
-								for (auto t = j; t < nr_children; t++) {
+								for (auto t = j; t < nr_children; ++t) {
 									++subtree_sizes[t];
 									subtree_psums[t] += m.get_val();
 								}
 								break;
 							}
 							case message_type::remove: {
-								for (auto t = j; t < nr_children; t++) {
+								for (auto t = j; t < nr_children; ++t) {
 									--subtree_sizes[t];
 									subtree_psums[t] -= m.get_val();
 								}
 								break;
 							}
 							case message_type::update: {
-								for (auto t = j; t < nr_children; t++) {
+								for (auto t = j; t < nr_children; ++t) {
 									m.get_val() ? ++subtree_psums[t] : --subtree_psums[t];
 								}
 								break;
@@ -927,7 +928,7 @@ namespace dyn {
 							default: throw;
 							}
 
-							const auto previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+							const auto previous_size = (j > 0) ? subtree_sizes[j - 1] : 0;
 
 							curr_message.set_index(curr_message.get_index() - previous_size);
 
@@ -943,8 +944,31 @@ namespace dyn {
 					{
 					case message_type::insert:
 					{
-						new_root = insert_item(m.get_index(), m.get_val());
-						break;
+						auto index = m.get_index();
+						auto pos = index == subtree_sizes[nr_children - 1] ? nr_children - 1 : find_child(index);
+						auto prev = pos != 0 ? index - subtree_sizes[pos - 1] : index;
+
+						auto leaf = insert_into_leaf(leaves[pos], prev, m.get_val());
+
+						for (auto t = pos; t < nr_children; ++t) {
+							++subtree_sizes[t];
+							subtree_psums[t] += m.get_val();
+						}
+
+						if (leaf)
+						{
+							new_children(prev, leaves[pos], leaf);
+							if (this->is_full())
+							{
+								auto splitted = split();
+
+
+								if (splitted) new_children(rank(), this, splitted);
+							}
+						}
+
+						/*new_root = insert_item(m.get_index(), m.get_val());
+						*/break;
 					}
 					case message_type::remove:
 					{

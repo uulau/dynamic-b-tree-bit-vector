@@ -7,7 +7,7 @@
 #include "sdsl-bv.hpp"
 
 typedef succinct_bitvector<packed_vector, 256, 16, 0, b_spsi> bbv;
-typedef succinct_bitvector<packed_vector, 256, 16, 16, be_spsi> bebv;
+typedef succinct_bitvector<packed_vector, 64, 1, 1, be_spsi> bebv;
 typedef sdsl_bv<64, 256> sdslbv;
 
 TEST(BEBV, Insertion10) {
@@ -32,6 +32,30 @@ TEST(BEBV, Insertion100000) {
 
 TEST(BEBV, Insertion1000000) {
 	insert_test<bebv>(1000000);
+}
+
+TEST(BEBV, Mixture10) {
+	mixture_test<bebv>(10);
+}
+
+TEST(BEBV, Mixture100) {
+	mixture_test<bebv>(100);
+}
+
+TEST(BEBV, Mixture1000) {
+	mixture_test<bebv>(1000);
+}
+
+TEST(BEBV, Mixture10000) {
+	mixture_test<bebv>(10000);
+}
+
+TEST(BEBV, Mixture100000) {
+	mixture_test<bebv>(100000);
+}
+
+TEST(BEBV, Mixture1000000) {
+	mixture_test<bebv>(1000000);
 }
 
 TEST(BEBV, Rank10) {
@@ -152,6 +176,30 @@ TEST(BBV, Insertion100000) {
 
 TEST(BBV, Insertion1000000) {
 	insert_test<bbv>(1000000);
+}
+
+TEST(BBV, Mixture10) {
+	mixture_test<bbv>(10);
+}
+
+TEST(BBV, Mixture100) {
+	mixture_test<bbv>(100);
+}
+
+TEST(BBV, Mixture1000) {
+	mixture_test<bbv>(1000);
+}
+
+TEST(BBV, Mixture10000) {
+	mixture_test<bbv>(10000);
+}
+
+TEST(BBV, Mixture100000) {
+	mixture_test<bbv>(100000);
+}
+
+TEST(BBV, Mixture1000000) {
+	mixture_test<bbv>(1000000);
 }
 
 TEST(BBV, Rank10) {

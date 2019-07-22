@@ -8,17 +8,17 @@
 // and/or keywords etc.
 #include <iso646.h>
 
-uint64_t __builtin_ctzll(uint64_t x) {
+inline uint64_t __builtin_ctzll(const uint64_t x) {
 	unsigned long val;
 	_BitScanForward64(&val, x);
 	return val;
 }
 
-uint64_t __builtin_popcountll(uint64_t num) {
+inline uint64_t __builtin_popcountll(const uint64_t num) {
 	return __popcnt64(num);
 }
 
-uint64_t __builtin_clzll(uint64_t num) {
+inline uint64_t __builtin_clzll(const uint64_t num) {
 	return __lzcnt64(num);
 }
 #endif

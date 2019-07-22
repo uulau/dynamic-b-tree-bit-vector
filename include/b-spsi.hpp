@@ -23,6 +23,7 @@
 using namespace std;
 
 #include <array>
+#include <fstream>
 #include "spsi-reference.hpp"
 
 namespace dyn {

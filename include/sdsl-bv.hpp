@@ -34,12 +34,11 @@ namespace dyn {
 				util::init_support(rs, &bv);
 				util::init_support(ss, &bv);
 				message_buffer = map<uint64_t, buffer_item>();
-				message_max = message_count;
 			}
 
 			~sdsl_bv() = default;
 
-			bool operator[](uint64_t i) const {
+			bool operator[](const uint64_t i) const {
 				return at(i);
 			}
 
@@ -111,7 +110,7 @@ namespace dyn {
 				uint64_t inserts = 0;
 				uint64_t highest_insert = 0;
 
-				const auto initialized = bv.size() > 0;
+				const auto initialized = !bv.empty();
 
 				const auto original = initialized ? ss.select(i) : 0;
 
@@ -278,7 +277,7 @@ namespace dyn {
 
 				if (!postpone_flush) {
 					// Flush if buffer full
-					if (messages == message_max) {
+					if (messages == message_count) {
 						flush_messages();
 					}
 				}
@@ -311,7 +310,6 @@ namespace dyn {
 			}
 
 			uint64_t messages = 0;
-			uint64_t message_max;
 			map<uint64_t, buffer_item> message_buffer;
 			rank_support_v5<1, 1> rs;
 			select_support_mcl<1, 1> ss;

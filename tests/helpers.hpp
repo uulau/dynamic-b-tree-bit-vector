@@ -32,6 +32,44 @@ template <class T> void insert_test(uint64_t size) {
 	delete tree;
 }
 
+template <class T> void mixture_test(uint64_t size) {
+	auto tree = generate_tree<T>(0);
+
+	for (uint64_t i = 0; i <= size; i++) {
+		auto set = i % 2;
+		tree->insert(i, set);
+		auto val = tree->at(i);
+		EXPECT_EQ(val, set);
+		if (val != set) {
+			break;
+		}
+		auto s = tree->size();
+		EXPECT_EQ(s, i + 1);
+		if (s != i + 1) {
+			break;
+		}
+	}
+
+	for (uint64_t i = 0; i < size - 1; i++) {
+		auto s = tree->size();
+		auto old = tree->at(0);
+		tree->remove(0);
+		auto new_size = tree->size();
+		EXPECT_TRUE(s - 1 == new_size);
+		if (s - 1 != new_size) {
+			break;
+		}
+		auto set = !old;
+		auto val = tree->at(0);
+		EXPECT_EQ(val, set);
+		if (val != set) {
+			break;
+		}
+	}
+
+	delete tree;
+}
+
 template <class T> void update_test(uint64_t size) {
 	auto tree = generate_tree<T>(size);
 	for (uint64_t i = 0; i < size; i++) {

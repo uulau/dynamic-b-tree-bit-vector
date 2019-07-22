@@ -1,17 +1,11 @@
 #include "benchmark.h"
-#include <iostream>
 #include "packed_vector.hpp"
 #include "succinct-bitvector.hpp"
 #include "test-case.hpp"
 #include "b-spsi.hpp"
 #include "be-spsi.hpp"
 #include "int_vector.hpp"
-#include "rank_support_v5.hpp"
-#include "util.hpp"
 #include "sdsl-bv.hpp"
-
-typedef succinct_bitvector<packed_vector, 256, 16, 0, b_spsi> bbv;
-typedef succinct_bitvector<packed_vector, 256, 16, 0, be_spsi> bebv;
 
 static int64_t const no_value = 0;
 
@@ -30,100 +24,8 @@ static int64_t const sdsl_max = 8196;
 
 static uint64_t data_size = 10000;
 
-static void be_tree(benchmark::internal::Benchmark* benchmark) {
-	for (auto b = branching_min; b <= branching_max; b *= branching_multiplier)
-	{
-		for (auto b_leaf = leaf_min; b_leaf <= leaf_max; b_leaf *= leaf_multiplier)
-		{
-			for (auto buffer = buffer_min; buffer <= buffer_max; buffer *= buffer_multiplier)
-			{
-				benchmark->Args({ b, b_leaf, buffer });
-			}
-		}
-	}
-}
-
-static void b_tree(benchmark::internal::Benchmark* benchmark) {
-	for (auto b = branching_min; b <= branching_max; b *= branching_multiplier)
-	{
-		for (auto b_leaf = leaf_min; b_leaf <= leaf_max; b_leaf *= leaf_multiplier)
-		{
-			benchmark->Args({ b, b_leaf, no_value });
-		}
-	}
-}
-
-static void sdsl_tree(benchmark::internal::Benchmark* benchmark) {
-
-	for (auto buffer = buffer_min; buffer <= sdsl_max; buffer *= buffer_multiplier)
-	{
-		benchmark->Args({ no_value, no_value, buffer });
-	}
-}
-
-static void rank_build(benchmark::State& state) {
-	sdsl::bit_vector bv(state.range(0));
-
-	for (auto i = 0; i < bv.size(); ++i)
-	{
-		if (i % 2)
-		{
-			bv[i] = true;
-		}
-		else
-		{
-			bv[i] = false;
-		}
-	}
-
-	sdsl::rank_support_v5<1, 1> rs;
-
-	for (auto _ : state) {
-		sdsl::util::init_support(rs, &bv);
-	}
-}
-
-//BENCHMARK(rank_build)->Range(1024, 33554432);
-
-static void rank_performance(benchmark::State& state) {
-	sdsl::bit_vector bv(state.range(0));
-
-	for (auto i = 0; i < bv.size(); ++i)
-	{
-		if (i % 2)
-		{
-			bv[i] = true;
-		}
-		else
-		{
-			bv[i] = false;
-		}
-	}
-
-	sdsl::rank_support_v5<1, 1> rs;
-
-	sdsl::util::init_support(rs, &bv);
-
-	vector<int> randoms;
-	const auto max = bv.size();
-
-	for (auto i = 0; i < state.range(1); ++i)
-	{
-		randoms.push_back(rand() % max);
-	}
-
-	for (auto _ : state) {
-		for (int64_t i = 0; i < state.range(1); ++i)
-		{
-			benchmark::DoNotOptimize(rs.rank(randoms[i]));
-		}
-	}
-}
-
-//BENCHMARK(rank_performance)->Ranges({ {1024, 33554432}, {1024, 33554432} });
-
 template <class T> static void Query(benchmark::State& state) {
-	T tree(state.range(0), state.range(1), state.range(2));
+	T tree{};
 
 	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
@@ -140,16 +42,16 @@ template <class T> static void Query(benchmark::State& state) {
 	}
 }
 
-//BENCHMARK_TEMPLATE(Query, sdsl_bv<64>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Query, sdsl_bv<128>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Query, sdsl_bv<256>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Query, sdsl_bv<512>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Query, sdsl_bv<1024>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Query, bbv)->Apply(b_tree);
-//BENCHMARK_TEMPLATE(Query, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Query, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+BENCHMARK_TEMPLATE(Query, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<64, 64>);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<128, 128>);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<256, 256>);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<512, 512>);
+BENCHMARK_TEMPLATE(Query, sdsl_bv<1024, 1024>);
 
 template <class T> static void Insertion(benchmark::State& state) {
-	T tree(state.range(0), state.range(1), state.range(2));
+	T tree{};
 
 	uint64_t index = 0;
 	for (auto _ : state) {
@@ -158,16 +60,16 @@ template <class T> static void Insertion(benchmark::State& state) {
 	}
 }
 
-//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<64>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<128>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<256>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<512>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<1024>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Insertion, bbv)->Apply(b_tree);
-//BENCHMARK_TEMPLATE(Insertion, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Insertion, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+BENCHMARK_TEMPLATE(Insertion, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<64, 64>);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<128, 128>);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<256, 256>);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<512, 512>);
+BENCHMARK_TEMPLATE(Insertion, sdsl_bv<1024, 1024>);
 
 template <class T> static void Deletion(benchmark::State& state) {
-	T tree(state.range(0), state.range(1), state.range(2));
+	T tree{};
 
 	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
@@ -189,11 +91,11 @@ template <class T> static void Deletion(benchmark::State& state) {
 	}
 }
 
-//BENCHMARK_TEMPLATE(Deletion, bbv)->Apply(b_tree);
-//BENCHMARK_TEMPLATE(Deletion, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Deletion, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Deletion, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
 
 template <class T> static void Rank(benchmark::State& state) {
-	T tree(state.range(0), state.range(1), state.range(2));
+	T tree{};
 
 	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
@@ -210,16 +112,16 @@ template <class T> static void Rank(benchmark::State& state) {
 	}
 }
 
-//BENCHMARK_TEMPLATE(Rank, sdsl_bv<64>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Rank, sdsl_bv<128>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Rank, sdsl_bv<256>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Rank, sdsl_bv<512>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Rank, sdsl_bv<1024>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Rank, bbv)->Apply(b_tree);
-//BENCHMARK_TEMPLATE(Rank, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Rank, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+BENCHMARK_TEMPLATE(Rank, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<64, 64>);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<128, 128>);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<256, 256>);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<512, 512>);
+BENCHMARK_TEMPLATE(Rank, sdsl_bv<1024, 1024>);
 
 template <class T> static void Select(benchmark::State& state) {
-	T tree(state.range(0), state.range(1), state.range(2));
+	T tree{};
 
 	for (auto i = 0; i < data_size; i++) {
 		tree.push_back(true);
@@ -236,13 +138,13 @@ template <class T> static void Select(benchmark::State& state) {
 	}
 }
 
-//BENCHMARK_TEMPLATE(Select, sdsl_bv<64>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Select, sdsl_bv<128>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Select, sdsl_bv<256>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Select, sdsl_bv<512>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Select, sdsl_bv<1024>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Select, bbv)->Apply(b_tree);
-//BENCHMARK_TEMPLATE(Select, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Select, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+BENCHMARK_TEMPLATE(Select, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<64, 64>);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<128, 128>);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<256, 256>);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<512, 512>);
+BENCHMARK_TEMPLATE(Select, sdsl_bv<1024, 1024>);
 
 template <class T> static void Operations(benchmark::State& state) {
 	auto messages = generate_ram_test(10000, 100);
@@ -255,13 +157,13 @@ template <class T> static void Operations(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<64, 256>)->Apply(sdsl_tree);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<128, 256>)->Apply(sdsl_tree);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<256, 256>)->Apply(sdsl_tree);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<512, 256>)->Apply(sdsl_tree);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<1024, 256>)->Apply(sdsl_tree);
-//BENCHMARK_TEMPLATE(Operations, bbv)->Apply(b_tree);
-//BENCHMARK_TEMPLATE(Operations, bebv)->Apply(be_tree);
+BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<64, 256>);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<128, 256>);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<256, 256>);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<512, 256>);
+BENCHMARK_TEMPLATE(Operations, sdsl_bv<1024, 256>);
 
 int main(int argc, char** argv)
 {
