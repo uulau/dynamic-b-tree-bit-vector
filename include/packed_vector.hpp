@@ -438,14 +438,14 @@ namespace dyn {
 
 		//shift left of 1 position elements starting
 		//from the (i + 1)-st.
-		void shift_left(uint64_t i) {
+		void shift_left(const uint64_t i) {
 
 			//number of integers that fit in a memory word
 			assert(int_per_word_ > 0);
 			assert(i < size_);
 
 			if (i == (size_ - 1)) {
-				set<false>(i, 0);
+				set<false>(i, false);
 				return;
 			}
 
@@ -471,9 +471,8 @@ namespace dyn {
 			//now for the remaining integers we can work blockwise
 			for (uint64_t j = current_word; fast_mul(j) < size_; ++j) {
 				words[j] >>= 1;
-
-				falling_in_idx = fast_mul(j + 1) < size_ ? at(fast_mul(j + 1)) : 0;
-
+				const auto fval = fast_mul(j + 1);
+				falling_in_idx = fval < size_ ? at(fval) : 0;
 				set<false>(fast_mul(j) + int_per_word_ - 1, falling_in_idx);
 			}
 

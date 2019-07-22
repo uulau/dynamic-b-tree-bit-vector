@@ -810,16 +810,17 @@ namespace dyn {
 				assert(nr_children > 0);
 				assert(nr_children - 1 < subtree_sizes.size());
 
-				uint64_t message_count = 0;
+				uint64_t insertions = 0;
+				uint64_t removals = 0;
 
 				for (const auto& message : message_buffer) {
 					switch (message.get_type()) {
 					case message_type::insert: {
-						++message_count;
+						++insertions;
 						break;
 					}
 					case message_type::remove: {
-						--message_count;
+						++removals;
 						break;
 					}
 					case update: {
@@ -831,7 +832,7 @@ namespace dyn {
 					}
 				}
 
-				return subtree_sizes[nr_children - 1];
+				return subtree_sizes[nr_children - 1] + insertions - removals;
 			}
 
 			uint64_t psum() const { return subtree_psums[nr_children - 1]; }
