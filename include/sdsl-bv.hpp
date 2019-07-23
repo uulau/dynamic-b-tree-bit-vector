@@ -70,6 +70,12 @@ namespace dyn {
 				add_message(remove_message(i, val));
 			}
 
+			uint64_t bit_size()
+			{
+				// TODO
+				return 0;
+			}
+
 			uint64_t size() const {
 				uint64_t counter = 0;
 

@@ -277,7 +277,7 @@ namespace dyn {
 				return root->serialize(out);
 			}
 
-			void load(istream& in) {
+			void load(istream& in) {l
 				root = new node();
 				root->load(in);
 			}

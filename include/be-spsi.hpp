@@ -332,6 +332,8 @@ namespace dyn {
 
 				has_leaves_ = n.has_leaves_;  // if true, leaves array is nonempty and
 											  // children is empty
+
+				message_buffer = n.get_messages();
 			}
 
 			/*
@@ -404,6 +406,11 @@ namespace dyn {
 				has_leaves_ = true;
 
 				leaves = std::move(c);
+			}
+
+			const vector<message>* get_messages() const
+			{
+				return &message_buffer;
 			}
 
 			/*
@@ -955,20 +962,38 @@ namespace dyn {
 							subtree_psums[t] += m.get_val();
 						}
 
+						// Leaf was split
 						if (leaf)
 						{
-							new_children(prev, leaves[pos], leaf);
-							if (this->is_full())
+							// Add leaf to children
+							new_children(pos, leaves[pos], leaf);
+
+							node* n = this;
+							while (n->is_full())
 							{
-								auto splitted = split();
+								auto root = n->is_root();
 
+								if (!root)
+								{
+									auto splitted = n->split();
+									n->get_parent()->new_children(n->rank(), n, splitted);
+									n = n->get_parent();
+								}
+								else
+								{
+									auto splitted = n->split();
+									std::vector<node*> vn{ n, splitted };
 
-								if (splitted) new_children(rank(), this, splitted);
+									new_root = new node(std::move(vn));
+									assert(!new_root->is_full());
+
+									n->overwrite_parent(new_root);
+									splitted->overwrite_parent(new_root);
+									break;
+								}
 							}
 						}
-
-						/*new_root = insert_item(m.get_index(), m.get_val());
-						*/break;
+						break;
 					}
 					case message_type::remove:
 					{
@@ -1883,6 +1908,53 @@ namespace dyn {
 
 				// update new number of children of this node
 				nr_children = nr_children / 2;
+
+				auto mb(std::move(message_buffer));
+				message_buffer.reserve(buffer_size);
+
+				node* n;
+				for (auto& m : mb) {
+					if (m.get_dirty()) {
+						continue;
+					}
+
+					switch (m.get_type()) {
+					case message_type::insert: {
+						if (m.get_index() <= size()) {
+							n = this;
+						}
+						else {
+							m.set_index(m.get_index() - size());
+							n = right;
+						}
+						n->message_buffer.emplace_back(m);
+						break;
+					}
+					case message_type::remove: {
+						if (m.get_index() < size()) {
+							n = this;
+						}
+						else {
+							m.set_index(m.get_index() - size());
+							n = right;
+						}
+						n->message_buffer.emplace_back(m);
+						break;
+					}
+					case message_type::update: {
+						if (m.get_index() < size()) {
+							n = this;
+						}
+						else {
+							m.set_index(m.get_index() - size());
+							n = right;
+						}
+						n->message_buffer.emplace_back(m);
+						break;
+					}
+					default: throw;
+					}
+				}
 
 				return right;
 			}

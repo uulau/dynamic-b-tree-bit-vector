@@ -5,6 +5,7 @@
 #include "message.hpp"
 #include <vector>
 #include <string>
+#include <random>
 
 using namespace std;
 using namespace dyn;
@@ -90,26 +91,30 @@ inline vector<message> read_test()
 	return messages;
 }
 
-inline vector<test_message> generate_ram_test(const uint64_t operations, const int ratio)
+inline vector<test_message> generate_ram_test(const uint64_t operations, const int ratio, const uint64_t count)
 {
 	assert(operations > 0);
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<long long unsigned> distribution(0, 0xFFFFFFFFFFFFFFFF);
 
 	const double insert_ratio = float(ratio) / float(100);
 
 	auto messages = vector<test_message>();
-	// Seed random number generator with time
-	srand(time(nullptr));
-	auto insert_counter = 0;
+	uint64_t insert_counter = 0;
 	for (uint64_t i = 0; i < operations; i++) {
-		const auto insert = insert_counter == 0 || rand() % 11 <= insert_ratio * 10;
+		const uint64_t insert = count + insert_counter == 0 || distribution(generator) % 11 <= insert_ratio * 10;
 		if (insert) {
-			const auto position = rand() % (insert_counter + 1);
-			const auto bit = rand() % 2;
+			const uint64_t position = distribution(generator) % (count + insert_counter + 1);
+			const uint64_t bit = distribution(generator) % 2;
 			messages.push_back(test_message::insert_message(position, bit));
 			insert_counter++;
 		}
 		else {
-			const auto position = rand() % (insert_counter);
+			const uint64_t position = distribution(generator) % (count + insert_counter);
 			messages.push_back(test_message::rank_message(position + 1));
 		}
 	}
