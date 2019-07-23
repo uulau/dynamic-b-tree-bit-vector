@@ -822,6 +822,11 @@ namespace dyn {
 				uint64_t removals = 0;
 
 				for (const auto& message : message_buffer) {
+					if (message.get_dirty())
+					{
+						continue;
+					}
+
 					switch (message.get_type()) {
 					case message_type::insert: {
 						++insertions;
@@ -1493,6 +1498,7 @@ namespace dyn {
 					//if root has only one child, make that child the root
 					if (p->nr_children == 1) {
 						new_root = p->children[0];
+						new_root->subtree_sizes[new_root->nr_children - 1] = p->subtree_sizes[0];
 						new_root->parent = nullptr;
 					}
 				}
