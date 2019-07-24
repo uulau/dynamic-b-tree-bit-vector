@@ -231,6 +231,10 @@ namespace dyn {
 
 			}
 
+			uint64_t depth() const {
+				return spsi_.depth();
+			}
+
 		private:
 			//underlying Searchable partial sum with inserts structure.
 			//the spsi contains only integers 0 and 1

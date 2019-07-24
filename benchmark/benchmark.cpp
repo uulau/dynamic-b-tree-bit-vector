@@ -27,13 +27,13 @@ template <class T> static void Query(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Query, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Query, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
-BENCHMARK_TEMPLATE(Query, sdsl_bv<64, 64>);
-BENCHMARK_TEMPLATE(Query, sdsl_bv<128, 128>);
-BENCHMARK_TEMPLATE(Query, sdsl_bv<256, 256>);
-BENCHMARK_TEMPLATE(Query, sdsl_bv<512, 512>);
-BENCHMARK_TEMPLATE(Query, sdsl_bv<1024, 1024>);
+//BENCHMARK_TEMPLATE(Query, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Query, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+//BENCHMARK_TEMPLATE(Query, sdsl_bv<64, 64>);
+//BENCHMARK_TEMPLATE(Query, sdsl_bv<128, 128>);
+//BENCHMARK_TEMPLATE(Query, sdsl_bv<256, 256>);
+//BENCHMARK_TEMPLATE(Query, sdsl_bv<512, 512>);
+//BENCHMARK_TEMPLATE(Query, sdsl_bv<1024, 1024>);
 
 template <class T> static void Insertion(benchmark::State& state) {
 	T tree{};
@@ -45,13 +45,13 @@ template <class T> static void Insertion(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Insertion, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Insertion, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
-BENCHMARK_TEMPLATE(Insertion, sdsl_bv<64, 64>);
-BENCHMARK_TEMPLATE(Insertion, sdsl_bv<128, 128>);
-BENCHMARK_TEMPLATE(Insertion, sdsl_bv<256, 256>);
-BENCHMARK_TEMPLATE(Insertion, sdsl_bv<512, 512>);
-BENCHMARK_TEMPLATE(Insertion, sdsl_bv<1024, 1024>);
+//BENCHMARK_TEMPLATE(Insertion, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Insertion, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<64, 64>);
+//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<128, 128>);
+//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<256, 256>);
+//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<512, 512>);
+//BENCHMARK_TEMPLATE(Insertion, sdsl_bv<1024, 1024>);
 
 template <class T> static void Deletion(benchmark::State& state) {
 	T tree{};
@@ -76,8 +76,8 @@ template <class T> static void Deletion(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Deletion, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Deletion, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+//BENCHMARK_TEMPLATE(Deletion, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Deletion, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
 
 template <class T> static void Rank(benchmark::State& state) {
 	T tree{};
@@ -97,13 +97,13 @@ template <class T> static void Rank(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Rank, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Rank, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
-BENCHMARK_TEMPLATE(Rank, sdsl_bv<64, 64>);
-BENCHMARK_TEMPLATE(Rank, sdsl_bv<128, 128>);
-BENCHMARK_TEMPLATE(Rank, sdsl_bv<256, 256>);
-BENCHMARK_TEMPLATE(Rank, sdsl_bv<512, 512>);
-BENCHMARK_TEMPLATE(Rank, sdsl_bv<1024, 1024>);
+//BENCHMARK_TEMPLATE(Rank, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Rank, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+//BENCHMARK_TEMPLATE(Rank, sdsl_bv<64, 64>);
+//BENCHMARK_TEMPLATE(Rank, sdsl_bv<128, 128>);
+//BENCHMARK_TEMPLATE(Rank, sdsl_bv<256, 256>);
+//BENCHMARK_TEMPLATE(Rank, sdsl_bv<512, 512>);
+//BENCHMARK_TEMPLATE(Rank, sdsl_bv<1024, 1024>);
 
 template <class T> static void Select(benchmark::State& state) {
 	T tree{};
@@ -123,16 +123,16 @@ template <class T> static void Select(benchmark::State& state) {
 	}
 }
 
-BENCHMARK_TEMPLATE(Select, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Select, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
-BENCHMARK_TEMPLATE(Select, sdsl_bv<64, 64>);
-BENCHMARK_TEMPLATE(Select, sdsl_bv<128, 128>);
-BENCHMARK_TEMPLATE(Select, sdsl_bv<256, 256>);
-BENCHMARK_TEMPLATE(Select, sdsl_bv<512, 512>);
-BENCHMARK_TEMPLATE(Select, sdsl_bv<1024, 1024>);
+//BENCHMARK_TEMPLATE(Select, succinct_bitvector<packed_vector, 256, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Select, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
+//BENCHMARK_TEMPLATE(Select, sdsl_bv<64, 64>);
+//BENCHMARK_TEMPLATE(Select, sdsl_bv<128, 128>);
+//BENCHMARK_TEMPLATE(Select, sdsl_bv<256, 256>);
+//BENCHMARK_TEMPLATE(Select, sdsl_bv<512, 512>);
+//BENCHMARK_TEMPLATE(Select, sdsl_bv<1024, 1024>);
 
 template <class T> static void Operations(benchmark::State& state) {
-	auto messages = generate_ram_test(1000000, 10, 8000000000);
+	auto messages = generate_ram_test(10000000, 10, 8000000000);
 
 	T tree{};
 
@@ -141,53 +141,56 @@ template <class T> static void Operations(benchmark::State& state) {
 		tree.push_back(i % 2);
 	}
 
+	auto set = false;
 	for (auto _ : state) {
 		execute_test(messages, tree);
-		state.counters["Size"] = tree.bit_size();
+		if (!set) {
+			state.counters["Size"] = tree.bit_size();
+			set = true;
+		}
 	}
 }
 
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 4, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 64, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 256, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 1024, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 4096, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 4, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 64, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 256, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 1024, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 512, 4096, 0, b_spsi>);
+//
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 4, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 64, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 256, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 1024, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 4096, 0, b_spsi>);
+//
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 4, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 64, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 256, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 1024, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 4096, 0, b_spsi>);
 
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 4, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 64, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 256, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 1024, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 1024, 4096, 0, b_spsi>);
-
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 4, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 64, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 256, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 1024, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 4096, 0, b_spsi>);
-
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 4, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 4, 0, b_spsi>);
 BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 64, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 64, 0, b_spsi>);
 BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi>);
 BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 1024, 0, b_spsi>);
 BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 4096, 0, b_spsi>);
 
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 4, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 16, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 64, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 256, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 1024, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 4096, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 4, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 64, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 256, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 1024, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 4096, 0, b_spsi>);
 
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 256, 16, 16, be_spsi>);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<64, 256>);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<128, 256>);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<256, 256>);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<512, 256>);
-BENCHMARK_TEMPLATE(Operations, sdsl_bv<1024, 256>);
+//BENCHMARK_TEMPLATE(Operations, sdsl_bv<64, 256>);
+//BENCHMARK_TEMPLATE(Operations, sdsl_bv<128, 256>);
+//BENCHMARK_TEMPLATE(Operations, sdsl_bv<256, 256>);
+//BENCHMARK_TEMPLATE(Operations, sdsl_bv<512, 256>);
+//BENCHMARK_TEMPLATE(Operations, sdsl_bv<1024, 256>);
 
 int main(int argc, char** argv)
 {

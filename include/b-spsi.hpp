@@ -151,6 +151,11 @@ namespace dyn {
 				return root->contains(x);
 			}
 
+			uint64_t depth() const
+			{
+				return root->depth();
+			}
+
 			/*
 			 * true iif x is one of  0, I_0+1, I_0+I_1+2, ...
 			 */
@@ -277,8 +282,9 @@ namespace dyn {
 				return root->serialize(out);
 			}
 
-			void load(istream& in) {l
-				root = new node();
+			void load(istream& in) {
+				l
+					root = new node();
 				root->load(in);
 			}
 
@@ -432,6 +438,16 @@ namespace dyn {
 				}
 
 				return bs;
+			}
+
+			uint64_t depth() const
+			{
+				if (has_leaves())
+				{
+					return 1;
+				}
+
+				return 1 + children[0]->depth();
 			}
 
 			bool has_leaves() const { return has_leaves_; }
@@ -1630,12 +1646,32 @@ namespace dyn {
 			 * helper functions for child search
 			 */
 			inline uint64_t find_child(uint64_t i) const {
-				uint64_t j = 0;
-				while (subtree_sizes[j] <= i) {
-					j++;
-					assert(j < subtree_sizes.size());
+				auto first = subtree_sizes.begin();
+				auto it = first;
+				uint64_t step = 0;
+				uint64_t count = std::distance(first, first + nr_children - 1);
+
+				while (count > 0) {
+					it = first;
+					step = count / 2;
+					std::advance(it, step);
+					if (!(i < *it)) {
+						first = ++it;
+						count -= step + 1;
+					}
+					else
+						count = step;
 				}
-				return j;
+				return first - subtree_sizes.begin();
+
+				//uint64_t j = 0;
+				//while (subtree_sizes[j] <= i) {
+				//	j++;
+				//	assert(j < subtree_sizes.size());
+				//}
+				//return j;
+				auto begin = subtree_sizes.begin();
+				return upper_bound(begin, begin + nr_children - 1, i) - begin;
 			}
 
 			inline uint64_t find_1(uint64_t x) const {
