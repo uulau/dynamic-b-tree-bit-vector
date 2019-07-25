@@ -51,6 +51,17 @@ namespace dyn {
 		}
 	};
 
+	struct i_buffer {
+		uint64_t i0 : 15;
+		uint64_t i1 : 15;
+		uint64_t i2 : 15;
+		uint64_t i3 : 15;
+		uint64_t val0 : 1;
+		uint64_t val1 : 1;
+		uint64_t val2 : 1;
+		uint64_t val3 : 1;
+	};
+
 	static message insert_message(const uint64_t index, const bool value)
 	{
 		message m;

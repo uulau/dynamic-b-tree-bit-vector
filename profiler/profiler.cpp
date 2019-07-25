@@ -4,12 +4,15 @@
 #include "b-spsi.hpp"
 #include "test-case.hpp"
 #include <chrono>
+#include "int_vector.hpp"
+#include "rank_support_v5.hpp"
+#include "util.hpp"
 
 using namespace std;
 using namespace dyn;
 using namespace std::chrono;
 
-template <int64_t B_LEAF, int64_t B> uint64_t test()
+template <int64_t B_LEAF, int64_t B> uint64_t test_tree()
 {
 	const uint64_t inserts = 8000000000;
 	const uint64_t ranks = 100000000;
@@ -62,11 +65,103 @@ template <int64_t B_LEAF, int64_t B> uint64_t test()
 	return count;
 }
 
+uint64_t test_packed()
+{
+	uint64_t count = 0;
+	uint64_t size = 256;
+	uint64_t ranks = 10000000;
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	// Empty bit vector
+	packed_vector vector{};
+
+	for (uint64_t i = 0; i < size / 64; ++i)
+	{
+		vector.insert_word(vector.size(), distribution(generator), 1, 64);
+	}
+
+	std::vector<test_message> messages;
+
+	for (uint64_t i = 0; i < ranks; ++i)
+	{
+		messages.push_back(test_message::rank_message(distribution(generator) % size));
+	}
+
+	const auto t1 = high_resolution_clock::now();
+
+	for (const auto& message : messages)
+	{
+		count += vector.psum(message.index);
+	}
+
+	const auto t2 = high_resolution_clock::now();
+
+	const auto duration = duration_cast<microseconds>(t2 - t1).count();
+
+	cout << "Initial insertions: " << size;
+	cout << "Ranks: " << ranks;
+	cout << "Time taken in microseconds: " << duration;
+	return count;
+}
+
+uint64_t test_sdsl()
+{
+	uint64_t count = 0;
+	uint64_t size = 8000000000;
+	uint64_t ranks = 100000000;
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	// Empty bit vector
+	sdsl::bit_vector bv(size);
+
+	const sdsl::rank_support_v5<1, 1> rs(&bv);
+
+	for (uint64_t i = 0; i < size; ++i)
+	{
+		bv[i] = rand() % 2;
+	}
+
+	std::vector<test_message> messages;
+
+	for (uint64_t i = 0; i < ranks; ++i)
+	{
+		messages.push_back(test_message::rank_message(distribution(generator) % size));
+	}
+
+	const auto t1 = high_resolution_clock::now();
+
+	for (const auto& message : messages)
+	{
+		count += rs.rank(message.index);
+	}
+
+	const auto t2 = high_resolution_clock::now();
+
+	const auto duration = duration_cast<microseconds>(t2 - t1).count();
+
+	cout << "Initial insertions: " << size;
+	cout << "Ranks: " << ranks;
+	cout << "Time taken in microseconds: " << duration;
+	return count;
+}
+
 int main() {
-	test< 4096, 16>();
-	test< 4096, 254>();
-	test< 4096, 1024>();
-	test< 4096, 4096>();
-	test< 4096, 8192>();
+	//return test_sdsl();
+	//return test_packed();
+	test_tree< 4096, 16>();
+	test_tree< 4096, 254>();
+	test_tree< 4096, 1024>();
+	test_tree< 4096, 4096>();
+	test_tree< 4096, 8192>();
 }
 
