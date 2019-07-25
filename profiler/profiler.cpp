@@ -40,7 +40,7 @@ template <int64_t B_LEAF, int64_t B> uint64_t test()
 
 	for (uint64_t i = 0; i < ranks; ++i)
 	{
-		messages.push_back(test_message::rank_message(distribution(generator) % (ranks + 1)));
+		messages.push_back(test_message::rank_message(distribution(generator) % (inserts + 1)));
 	}
 
 	const auto t1 = high_resolution_clock::now();

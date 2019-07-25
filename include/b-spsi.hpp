@@ -1646,32 +1646,14 @@ namespace dyn {
 			 * helper functions for child search
 			 */
 			inline uint64_t find_child(uint64_t i) const {
-				auto first = subtree_sizes.begin();
-				auto it = first;
-				uint64_t step = 0;
-				uint64_t count = std::distance(first, first + nr_children - 1);
-
-				while (count > 0) {
-					it = first;
-					step = count / 2;
-					std::advance(it, step);
-					if (!(i < *it)) {
-						first = ++it;
-						count -= step + 1;
-					}
-					else
-						count = step;
+				uint64_t j = 0;
+				while (subtree_sizes[j] <= i) {
+					j++;
+					assert(j < subtree_sizes.size());
 				}
-				return first - subtree_sizes.begin();
-
-				//uint64_t j = 0;
-				//while (subtree_sizes[j] <= i) {
-				//	j++;
-				//	assert(j < subtree_sizes.size());
-				//}
-				//return j;
-				auto begin = subtree_sizes.begin();
-				return upper_bound(begin, begin + nr_children - 1, i) - begin;
+				return j;
+				//auto begin = subtree_sizes.begin();
+				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
 			}
 
 			inline uint64_t find_1(uint64_t x) const {
