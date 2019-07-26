@@ -103,9 +103,56 @@ uint64_t test_packed()
 
 	const auto duration = duration_cast<microseconds>(t2 - t1).count();
 
-	cout << "Initial insertions: " << size;
-	cout << "Ranks: " << ranks;
-	cout << "Time taken in microseconds: " << duration;
+	cout << "Initial insertions: " << size << "\n";
+	cout << "Ranks: " << ranks << "\n";
+	cout << "Time taken in microseconds: " << duration << "\n";
+	return count;
+}
+
+uint64_t test_packed2()
+{
+	uint64_t count = 0;
+	uint64_t size = 256;
+	uint64_t inserts = 10000000;
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	// Empty bit vector
+	packed_vector vector{};
+
+	for (uint64_t i = 0; i < size / 64; ++i)
+	{
+		vector.insert_word(vector.size(), distribution(generator), 1, 64);
+	}
+
+	std::vector<test_message> messages;
+
+	for (uint64_t i = 0; i < inserts; ++i)
+	{
+		messages.push_back(test_message::insert_message(distribution(generator) % size, rand() % 2));
+	}
+
+	const auto t1 = high_resolution_clock::now();
+
+	for (const auto& message : messages)
+	{
+		if (vector.size() == size) {
+			vector.split();
+		}
+		vector.insert(message.index, message.val);
+	}
+
+	const auto t2 = high_resolution_clock::now();
+
+	const auto duration = duration_cast<microseconds>(t2 - t1).count();
+
+	cout << "Initial insertions: " << size << "\n";
+	cout << "Following insertions: " << inserts << "\n";
+	cout << "Time taken in microseconds: " << duration << "\n";
 	return count;
 }
 
@@ -149,45 +196,46 @@ uint64_t test_sdsl()
 
 	const auto duration = duration_cast<microseconds>(t2 - t1).count();
 
-	cout << "Initial insertions: " << size;
-	cout << "Ranks: " << ranks;
-	cout << "Time taken in microseconds: " << duration;
+	cout << "Initial insertions: " << size << "\n";
+	cout << "Ranks: " << ranks << "\n";
+	cout << "Time taken in microseconds: " << duration << "\n";
 	return count;
 }
 
 int main() {
 	packed_vector v{};
 
-	uint64_t ranks = 0;
-	uint64_t vals = 0;
-	for (int i = 0; i < 32767; ++i) {
-		auto val = rand() % 2;
+	//uint64_t ranks = 0;
+	//uint64_t vals = 0;
+	//for (int i = 0; i < 32767; ++i) {
+	//	auto val = rand() % 2;
 
-		if (val) ++ranks;
-		vals += val;
+	//	if (val) ++ranks;
+	//	vals += val;
 
-		v.insert(v.size(), val);
+	//	v.insert(v.size(), val);
 
-		if (v.size() != i + 1) {
-			throw;
-		}
+	//	if (v.size() != i + 1) {
+	//		throw;
+	//	}
 
-		if (v.psum(i) != ranks) {
-			throw;
-		}
+	//	if (v.psum(i) != ranks) {
+	//		throw;
+	//	}
 
-		if (v.at(i) != val) {
-			throw;
-		}
+	//	if (v.at(i) != val) {
+	//		throw;
+	//	}
 
-		if (vals != v.psum()) {
-			throw;
-		}
-	}
+	//	if (vals != v.psum()) {
+	//		throw;
+	//	}
+	//}
 
-	int a = 1;
+	//int a = 1;
 	//return test_sdsl();
-	//return test_packed();
+	/*return test_packed();*/
+	return test_packed2();
 	//test_tree< 4096, 16>();
 	//test_tree< 4096, 254>();
 	//test_tree< 4096, 1024>();

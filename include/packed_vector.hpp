@@ -95,7 +95,7 @@ namespace dyn {
 				if (i == i0) return buffer.val0;
 				if (i == i1) return buffer.val1;
 
-				if (i1 < i0) --i0;
+				//if (i1 < i0) --i0;
 
 				if (i0 <= i) ++offset;
 				if (i1 <= i) ++offset;
@@ -113,9 +113,9 @@ namespace dyn {
 				if (i == i1) return buffer.val1;
 				if (i == i2) return buffer.val2;
 
-				if (i2 < i1) --i1;
-				if (i2 < i0) --i0;
-				if (i1 < i0) --i0;
+				//if (i2 < i1) --i1;
+				//if (i2 < i0) --i0;
+				//if (i1 < i0) --i0;
 
 				if (i0 <= i) ++offset;
 				if (i1 <= i) ++offset;
@@ -135,12 +135,12 @@ namespace dyn {
 				if (i == i2) return buffer.val2;
 				if (i == i3) return buffer.val3;
 
-				if (i3 < i2) --i2;
-				if (i3 < i1) --i1;
-				if (i3 < i0) --i0;
-				if (i2 < i1) --i1;
-				if (i2 < i0) --i0;
-				if (i1 < i0) --i0;
+				//if (i3 < i2) --i2;
+				//if (i3 < i1) --i1;
+				//if (i3 < i0) --i0;
+				//if (i2 < i1) --i1;
+				//if (i2 < i0) --i0;
+				//if (i1 < i0) --i0;
 
 				if (i0 <= i) ++offset;
 				if (i1 <= i) ++offset;
@@ -407,66 +407,28 @@ namespace dyn {
 			if (i2 < i0) --i0;
 			if (i1 < i0) --i0;
 
-			auto b_size = buffer_size();
-			if (b_size >= 1) insert(i0, buffer.val0, true);
-			buffer.i0 = max_bits;
-			if (b_size >= 2) insert(i1, buffer.val1, true);
-			buffer.i1 = max_bits;
-			if (b_size >= 3) insert(i2, buffer.val2, true);
-			buffer.i2 = max_bits;
-			if (b_size == 4) insert(i3, buffer.val3, true);
-			buffer.i3 = max_bits;
+			if (buffer.i0 != max_bits) {
+				insert_no_buffer(i0, buffer.val0);
+				buffer.i0 = max_bits;
+			}
+			if (buffer.i1 != max_bits) {
+				insert_no_buffer(i1, buffer.val1);
+				buffer.i1 = max_bits;
+			}
+
+			if (buffer.i2 != max_bits) {
+				insert_no_buffer(i2, buffer.val2);
+				buffer.i2 = max_bits;
+			}
+
+			if (buffer.i3 != max_bits) {
+				insert_no_buffer(i3, buffer.val3);
+				buffer.i3 = max_bits;
+			}
 		}
 
-		void insert(uint64_t i, uint64_t x, bool bypass_buffer = false) {
-			if (!bypass_buffer) {
-				switch (buffer_size())
-				{
-				case 0:
-				{
-					buffer.i0 = i;
-					buffer.val0 = x;
-					return;
-				}
-
-				case 1:
-				{
-					if (i <= buffer.i0) ++buffer.i0;
-
-					buffer.i1 = i;
-					buffer.val1 = x;
-					return;
-				}
-
-				case 2:
-				{
-					if (i <= buffer.i0) ++buffer.i0;
-					if (i <= buffer.i1) ++buffer.i1;
-
-					buffer.i2 = i;
-					buffer.val2 = x;
-					return;
-				}
-
-				case 3:
-				{
-					if (i <= buffer.i0) ++buffer.i0;
-					if (i <= buffer.i1) ++buffer.i1;
-					if (i <= buffer.i2) ++buffer.i2;
-
-					buffer.i3 = i;
-					buffer.val3 = x;
-					return;
-				}
-				case 4:
-				{
-					flush_messages();
-					break;
-				}
-				default: break;
-				}
-			}
-			//if (i == size()) {
+		void insert_no_buffer(uint64_t i, uint64_t x) {
+			//if (i == size_) {
 			//	push_back(x);
 			//	return;
 			//}
@@ -489,6 +451,55 @@ namespace dyn {
 			//assert((size_ / int_per_word_ == words.size()
 			//	|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
 			//	&& "uninitialized non-zero values in the end of the vector");
+		}
+
+		void insert(uint64_t i, uint64_t x, bool bypass_buffer = false) {
+			switch (buffer_size())
+			{
+			case 0:
+			{
+				buffer.i0 = i;
+				buffer.val0 = x;
+				return;
+			}
+
+			case 1:
+			{
+				if (i <= buffer.i0) ++buffer.i0;
+
+				buffer.i1 = i;
+				buffer.val1 = x;
+				return;
+			}
+
+			case 2:
+			{
+				if (i <= buffer.i0) ++buffer.i0;
+				if (i <= buffer.i1) ++buffer.i1;
+
+				buffer.i2 = i;
+				buffer.val2 = x;
+				return;
+			}
+
+			case 3:
+			{
+				if (i <= buffer.i0) ++buffer.i0;
+				if (i <= buffer.i1) ++buffer.i1;
+				if (i <= buffer.i2) ++buffer.i2;
+
+				buffer.i3 = i;
+				buffer.val3 = x;
+				return;
+			}
+			case 4:
+			{
+				flush_messages();
+				insert(i, x);
+				break;
+			}
+			default: return;
+			}
 		}
 
 		/*
@@ -585,7 +596,7 @@ namespace dyn {
 		 */
 		uint64_t bit_size() const
 		{
-			return (sizeof(packed_vector) + words.capacity() * sizeof(uint64_t)) * 8;
+			return (sizeof(packed_vector) + words.capacity() * sizeof(uint64_t)) * 8 + 2 * sizeof(i_buffer) * 8;
 		}
 
 		uint64_t width() const {
@@ -676,7 +687,7 @@ namespace dyn {
 
 				words[j] <<= 1;
 
-				assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
+				//assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
 
 				set<false>(fast_mul(j), falling_out);
 
@@ -756,6 +767,7 @@ namespace dyn {
 			return counter;
 		}
 
+		// Should be removed by compiler
 		static constexpr uint16_t max_bits = 32767;
 
 		static constexpr uint8_t width_ = 1;
