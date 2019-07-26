@@ -1642,16 +1642,51 @@ namespace dyn {
 				return 2 * B_LEAF - l.size();
 			}
 
+			uint64_t linear_skip(uint64_t skip, uint64_t i, uint64_t size) const
+			{
+				while (skip < size)
+				{
+					const auto val = subtree_sizes[skip];
+					if (val > i)
+					{
+						while (skip > 0 && subtree_sizes[skip - 1] > i)
+						{
+							--skip;
+						}
+						return skip;
+					}
+
+					const auto new_val = skip << 1;
+					if (new_val < size)
+					{
+						skip = new_val;
+					}
+					else
+					{
+						break;
+					}
+				}
+
+				for (uint64_t index = skip < size ? skip : 0; index < size; ++index)
+				{
+					if (subtree_sizes[index] > i)
+					{
+						return index;
+					}
+				}
+			}
+
 			/*
 			 * helper functions for child search
 			 */
 			inline uint64_t find_child(uint64_t i) const {
-				uint64_t j = 0;
-				while (subtree_sizes[j] <= i) {
-					j++;
-					assert(j < subtree_sizes.size());
-				}
-				return j;
+				return linear_skip(16, i, nr_children);
+				//uint64_t j = 0;
+				//while (subtree_sizes[j] <= i) {
+				//	j++;
+				//	assert(j < subtree_sizes.size());
+				//}
+				//return j;
 				//auto begin = subtree_sizes.begin();
 				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
 			}

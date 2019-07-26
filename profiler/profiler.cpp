@@ -156,12 +156,42 @@ uint64_t test_sdsl()
 }
 
 int main() {
+	packed_vector v{};
+
+	uint64_t ranks = 0;
+	uint64_t vals = 0;
+	for (int i = 0; i < 32767; ++i) {
+		auto val = rand() % 2;
+
+		if (val) ++ranks;
+		vals += val;
+
+		v.insert(v.size(), val);
+
+		if (v.size() != i + 1) {
+			throw;
+		}
+
+		if (v.psum(i) != ranks) {
+			throw;
+		}
+
+		if (v.at(i) != val) {
+			throw;
+		}
+
+		if (vals != v.psum()) {
+			throw;
+		}
+	}
+
+	int a = 1;
 	//return test_sdsl();
 	//return test_packed();
-	test_tree< 4096, 16>();
-	test_tree< 4096, 254>();
-	test_tree< 4096, 1024>();
-	test_tree< 4096, 4096>();
-	test_tree< 4096, 8192>();
+	//test_tree< 4096, 16>();
+	//test_tree< 4096, 254>();
+	//test_tree< 4096, 1024>();
+	//test_tree< 4096, 4096>();
+	//test_tree< 4096, 8192>();
 }
 

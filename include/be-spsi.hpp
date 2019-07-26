@@ -19,7 +19,6 @@
  *
  */
 #pragma once
-#include "../../../../../Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.21.27702/include/iso646.h"
 
 using namespace std;
 
