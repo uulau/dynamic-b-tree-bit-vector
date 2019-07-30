@@ -3,13 +3,13 @@
 // by a MIT license that can be found in the LICENSE file.
 
 #pragma once
-
+#define HAVE_AVX2
 #include "msvc.hpp"
 #include <cassert>
 #include <algorithm>
 #include <vector>
 #include <cstdint>
-#include "message.hpp"
+#include "libpopcnt.h"
 
 namespace dyn {
 	class packed_vector {
@@ -35,11 +35,6 @@ namespace dyn {
 
 			words = std::vector<uint64_t>(fast_div(size_) + (fast_mod(size_) != 0));
 
-			buffer.i0 = max_bits;
-			buffer.i1 = max_bits;
-			buffer.i2 = max_bits;
-			buffer.i3 = max_bits;
-
 			assert(size_ / int_per_word_ <= words.size());
 			assert((size_ / int_per_word_ == words.size()
 				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
@@ -51,11 +46,6 @@ namespace dyn {
 			this->size_ = new_size;
 			this->psum_ = psum(size_ - 1);
 
-			buffer.i0 = max_bits;
-			buffer.i1 = max_bits;
-			buffer.i2 = max_bits;
-			buffer.i3 = max_bits;
-
 			assert(size_ / int_per_word_ <= words.size());
 			assert((size_ / int_per_word_ == words.size()
 				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
@@ -64,147 +54,51 @@ namespace dyn {
 
 		~packed_vector() = default;
 
-		bool at(uint64_t i) const {
-			assert(i < size());
-
-			auto offset = 0;
-
-			switch (buffer_size())
-			{
-			case 0:
-			{
-				break;
-			}
-
-			case 1:
-			{
-				const auto i0 = buffer.i0;
-
-				if (i == i0) return buffer.val0;
-
-				if (i0 <= i) ++offset;
-
-				break;
-			}
-
-			case 2:
-			{
-				auto i0 = buffer.i0;
-				auto i1 = buffer.i1;
-
-				if (i == i0) return buffer.val0;
-				if (i == i1) return buffer.val1;
-
-				if (i0 <= i) ++offset;
-				if (i1 <= i) ++offset;
-
-				break;
-			}
-
-			case 3:
-			{
-				auto i0 = buffer.i0;
-				auto i1 = buffer.i1;
-				auto i2 = buffer.i2;
-
-				if (i == i0) return buffer.val0;
-				if (i == i1) return buffer.val1;
-				if (i == i2) return buffer.val2;
-
-				if (i0 <= i) ++offset;
-				if (i1 <= i) ++offset;
-				if (i2 <= i) ++offset;
-
-				break;
-			}
-			case 4:
-			{
-				auto i0 = buffer.i0;
-				auto i1 = buffer.i1;
-				auto i2 = buffer.i2;
-				auto i3 = buffer.i3;
-
-				if (i == i0) return buffer.val0;
-				if (i == i1) return buffer.val1;
-				if (i == i2) return buffer.val2;
-				if (i == i3) return buffer.val3;
-
-				if (i0 <= i) ++offset;
-				if (i1 <= i) ++offset;
-				if (i2 <= i) ++offset;
-				if (i3 <= i) ++offset;
-
-				break;
-			}
-			default: break;
-			}
-
-			i = i - offset;
+		bool at(uint64_t const i) const {
+			assert(i < size_);
 
 			return MASK & (words[fast_div(i)] >> fast_mod(i));
 		}
 
 		uint64_t psum() const {
-			uint64_t sum = psum_;
-			if (buffer.i0 != max_bits) sum += buffer.val0;
-			if (buffer.i1 != max_bits) sum += buffer.val1;
-			if (buffer.i2 != max_bits) sum += buffer.val2;
-			if (buffer.i3 != max_bits) sum += buffer.val3;
-			return sum;
+			return psum_;
 		}
 
 		/*
 		 * inclusive partial sum (i.e. up to element i included)
 		 */
 		uint64_t psum(uint64_t i) const {
-			uint8_t count = 0;
-			uint8_t offset = 0;
 
-			assert(i < size());
+			assert(i < size_);
 
 			i++;
-
-			if (buffer.i0 != max_bits && buffer.i0 < i)
-			{
-				++count;
-				offset += buffer.val0;
-			}
-
-			if (buffer.i1 != max_bits && buffer.i1 < i)
-			{
-				++count;
-				offset += buffer.val1;
-			}
-
-			if (buffer.i2 != max_bits && buffer.i2 < i)
-			{
-				++count;
-				offset += buffer.val2;
-			}
-
-			if (buffer.i3 != max_bits && buffer.i3 < i)
-			{
-				++count;
-				offset += buffer.val3;
-			}
-
-			i = i - count;
 
 			uint64_t s = 0;
 			uint64_t pos = 0;
 
-			auto const max = fast_div(i);
-			for (uint64_t j = 0; j < max; ++j) {
-				s += __builtin_popcountll(words[j]);
-				pos += 64;
-			}
+			//auto const max = fast_div(i);
+			//for (uint64_t j = 0; j < max; ++j) {
+			//	s += __builtin_popcountll(words[j]);
+			//	pos += 64;
+			//}
+			//auto const mod = fast_mod(i);
+			//if (mod) {
+			//	s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
+			//}
 
-			auto const mod = fast_mod(i);
+			// Amount of bytes (i / 8)
+			auto const max = i >> 6;
+			auto const max_byte = i >> 3;
+			s += popcnt(words.data(), max_byte);
+
+			// Remainder
+			auto const mod = i & 7;
+
 			if (mod) {
 				s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
 			}
 
-			return s + offset;
+			return s;
 		}
 
 		/*
@@ -380,45 +274,11 @@ namespace dyn {
 				&& "uninitialized non-zero values in the end of the vector");
 		}
 
-		void flush_messages()
-		{
-			auto i0 = buffer.i0;
-			auto i1 = buffer.i1;
-			auto i2 = buffer.i2;
-			auto i3 = buffer.i3;
-
-			if (i3 < i2) --i2;
-			if (i3 < i1) --i1;
-			if (i3 < i0) --i0;
-			if (i2 < i1) --i1;
-			if (i2 < i0) --i0;
-			if (i1 < i0) --i0;
-
-			if (buffer.i0 != max_bits) {
-				insert_no_buffer(i0, buffer.val0);
-				buffer.i0 = max_bits;
+		void insert(uint64_t i, uint64_t x) {
+			if (i == size()) {
+				push_back(x);
+				return;
 			}
-			if (buffer.i1 != max_bits) {
-				insert_no_buffer(i1, buffer.val1);
-				buffer.i1 = max_bits;
-			}
-
-			if (buffer.i2 != max_bits) {
-				insert_no_buffer(i2, buffer.val2);
-				buffer.i2 = max_bits;
-			}
-
-			if (buffer.i3 != max_bits) {
-				insert_no_buffer(i3, buffer.val3);
-				buffer.i3 = max_bits;
-			}
-		}
-
-		void insert_no_buffer(uint64_t i, uint64_t x) {
-			//if (i == size_) {
-			//	push_back(x);
-			//	return;
-			//}
 
 			if (size_ + 1 > fast_mul(words.size())) {
 				words.reserve(words.size() + extra_);
@@ -434,59 +294,10 @@ namespace dyn {
 			psum_ += x;
 			++size_;
 
-			//assert(size_ / int_per_word_ <= words.size());
-			//assert((size_ / int_per_word_ == words.size()
-			//	|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
-			//	&& "uninitialized non-zero values in the end of the vector");
-		}
-
-		void insert(uint64_t i, uint64_t x, bool bypass_buffer = false) {
-			switch (buffer_size())
-			{
-			case 0:
-			{
-				buffer.i0 = i;
-				buffer.val0 = x;
-				return;
-			}
-
-			case 1:
-			{
-				if (i <= buffer.i0) ++buffer.i0;
-
-				buffer.i1 = i;
-				buffer.val1 = x;
-				return;
-			}
-
-			case 2:
-			{
-				if (i <= buffer.i0) ++buffer.i0;
-				if (i <= buffer.i1) ++buffer.i1;
-
-				buffer.i2 = i;
-				buffer.val2 = x;
-				return;
-			}
-
-			case 3:
-			{
-				if (i <= buffer.i0) ++buffer.i0;
-				if (i <= buffer.i1) ++buffer.i1;
-				if (i <= buffer.i2) ++buffer.i2;
-
-				buffer.i3 = i;
-				buffer.val3 = x;
-				return;
-			}
-			case 4:
-			{
-				flush_messages();
-				insert(i, x);
-				break;
-			}
-			default: return;
-			}
+			assert(size_ / int_per_word_ <= words.size());
+			assert((size_ / int_per_word_ == words.size()
+				|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
+				&& "uninitialized non-zero values in the end of the vector");
 		}
 
 		/*
@@ -521,7 +332,7 @@ namespace dyn {
 
 		uint64_t size() const
 		{
-			return size_ + buffer_size();
+			return size_;
 		}
 
 		/*
@@ -530,7 +341,6 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-			flush_messages();
 			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
@@ -583,7 +393,7 @@ namespace dyn {
 		 */
 		uint64_t bit_size() const
 		{
-			return (sizeof(packed_vector) + words.capacity() * sizeof(uint64_t)) * 8 + 2 * sizeof(i_buffer) * 8;
+			return (sizeof(packed_vector) + words.capacity() * sizeof(uint64_t)) * 8;
 		}
 
 		uint64_t width() const {
@@ -639,7 +449,7 @@ namespace dyn {
 		//from the i-th.
 		//assumption: last element does not overflow!
 		void shift_right(uint64_t i) {
-			//assert(i < size_);
+			assert(i < size_);
 			//number of integers that fit in a memory word
 			assert(int_per_word_ > 0);
 			assert(size_ + 1 <= fast_mul(words.size()));
@@ -674,45 +484,13 @@ namespace dyn {
 
 				words[j] <<= 1;
 
-				//assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
+				assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
 
 				set<false>(fast_mul(j), falling_out);
 
 				falling_out = falling_out_temp;
 			}
 		}
-
-		//void flush_shift() {
-		//	// Adds insertions to vector for sorting
-		//	std::vector<std::tuple<uint64_t, uint64_t, bool>> vals =
-		//	{ { buffer.i0, fast_div(buffer.i0), buffer.val0},
-		//	{ buffer.i1, fast_div(buffer.i1), buffer.val1 },
-		//	{ buffer.i2, fast_div(buffer.i2), buffer.val2 },
-		//	{ buffer.i3, fast_div(buffer.i3), buffer.val3 } };
-
-		//	// Sort insertions in descending order
-		//	std::sort(vals.begin(), vals.end(), [](const std::tuple<uint64_t, bool> a, const std::tuple<uint64_t, bool> b) -> bool
-		//		{
-		//			return std::get<0>(a) > std::get<0>(b);
-		//		});
-
-		//	// Start from last word
-		//	uint64_t current_word = words.size() - 1;
-		//	// Integer that falls out from the right of current word
-		//	uint64_t falling_out = 0;
-		//	uint8_t shift_count = 4;
-
-		//	auto insertion_index = 0;
-		//	for (auto word_index = words.size - 1; word_index >= 0; --word_index) {
-		//		auto word = words[word_index];
-		//		auto insertion = vals[insertion_index];
-		//		
-		//		bool contained
-		//		for (int i = insertion_index; i < vals.size(); ++i) {
-
-		//		}
-		//	}
-		//}
 
 		//shift left of 1 position elements starting
 		//from the (i + 1)-st.
@@ -764,31 +542,6 @@ namespace dyn {
 			return res;
 		}
 
-		uint8_t buffer_size() const {
-			uint8_t counter = 0;
-
-			if (buffer.i0 != max_bits) {
-				++counter;
-			}
-
-			if (buffer.i1 != max_bits) {
-				++counter;
-			}
-
-			if (buffer.i2 != max_bits) {
-				++counter;
-			}
-
-			if (buffer.i3 != max_bits) {
-				++counter;
-			}
-
-			return counter;
-		}
-
-		// Should be removed by compiler
-		static constexpr uint16_t max_bits = 32767;
-
 		static constexpr uint8_t width_ = 1;
 		static constexpr uint8_t int_per_word_ = 64;
 		static constexpr uint64_t MASK = 1;
@@ -796,7 +549,6 @@ namespace dyn {
 		std::vector<uint64_t> words{};
 		uint64_t psum_ = 0;
 		uint64_t size_ = 0;
-		i_buffer buffer{};
 	};
 
 }

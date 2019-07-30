@@ -1,4 +1,4 @@
-#include "packed_vector.hpp"
+#include "packed_vector2.hpp"
 #include "succinct-bitvector.hpp"
 #include "sdsl-bv.hpp"
 #include "b-spsi.hpp"
@@ -69,7 +69,7 @@ uint64_t test_packed()
 {
 	uint64_t count = 0;
 	uint64_t size = 256;
-	uint64_t ranks = 10000000;
+	uint64_t ranks = 100000000;
 
 	std::random_device rd;
 
@@ -106,6 +106,8 @@ uint64_t test_packed()
 	cout << "Initial insertions: " << size << "\n";
 	cout << "Ranks: " << ranks << "\n";
 	cout << "Time taken in microseconds: " << duration << "\n";
+	cout << "\n";
+
 	return count;
 }
 
@@ -153,6 +155,8 @@ uint64_t test_packed2()
 	cout << "Initial insertions: " << size << "\n";
 	cout << "Following insertions: " << inserts << "\n";
 	cout << "Time taken in microseconds: " << duration << "\n";
+	cout << "\n";
+
 	return count;
 }
 
@@ -199,47 +203,160 @@ uint64_t test_sdsl()
 	cout << "Initial insertions: " << size << "\n";
 	cout << "Ranks: " << ranks << "\n";
 	cout << "Time taken in microseconds: " << duration << "\n";
+	cout << "\n";
+
 	return count;
 }
 
-int main() {
+uint64_t test_array()
+{
+	uint64_t count = 0;
+	uint64_t size = 8000000000;
+	uint64_t queries = 100000000;
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	bool* ar = new bool[size];
+
+	for (uint64_t i = 0; i < size; ++i)
+	{
+		ar[i] = rand() % 2;
+	}
+
+	std::vector<test_message> messages;
+
+	for (uint64_t i = 0; i < queries; ++i)
+	{
+		messages.push_back(test_message::rank_message(distribution(generator) % size));
+	}
+
+	const auto t1 = high_resolution_clock::now();
+
+	for (const auto& message : messages)
+	{
+		count += ar[message.index];
+	}
+
+	const auto t2 = high_resolution_clock::now();
+
+	const auto duration = duration_cast<microseconds>(t2 - t1).count();
+
+	cout << "Initial insertions: " << size << "\n";
+	cout << "Queries: " << queries << "\n";
+	cout << "Time taken in microseconds: " << duration << "\n";
+	cout << "\n";
+
+	delete[] ar;
+	return count;
+}
+
+uint64_t test_sdsl_array()
+{
+	uint64_t count = 0;
+	uint64_t size = 8000000000;
+	uint64_t queries = 100000000;
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	// Empty bit vector
+	sdsl::bit_vector bv(size);
+
+	for (uint64_t i = 0; i < size; ++i)
+	{
+		bv[i] = rand() % 2;
+	}
+
+	std::vector<test_message> messages;
+
+	for (uint64_t i = 0; i < queries; ++i)
+	{
+		messages.push_back(test_message::rank_message(distribution(generator) % size));
+	}
+
+	const auto t1 = high_resolution_clock::now();
+
+	for (const auto& message : messages)
+	{
+		count += bv[message.index];
+	}
+
+	const auto t2 = high_resolution_clock::now();
+
+	const auto duration = duration_cast<microseconds>(t2 - t1).count();
+
+	cout << "Initial insertions: " << size << "\n";
+	cout << "Queries: " << queries << "\n";
+	cout << "Time taken in microseconds: " << duration << "\n";
+	cout << "\n";
+
+	return count;
+}
+
+uint64_t packed_vector_test() {
 	packed_vector v{};
 
-	//uint64_t ranks = 0;
-	//uint64_t vals = 0;
-	//for (int i = 0; i < 32767; ++i) {
-	//	auto val = rand() % 2;
+	uint64_t ranks = 0;
+	uint64_t vals = 0;
+	for (int i = 0; i < 32767; ++i) {
+		auto val = rand() % 2;
 
-	//	if (val) ++ranks;
-	//	vals += val;
+		if (val) ++ranks;
+		vals += val;
 
-	//	v.insert(v.size(), val);
+		v.insert(v.size(), val);
 
-	//	if (v.size() != i + 1) {
-	//		throw;
-	//	}
+		if (v.size() != i + 1) {
+			throw;
+		}
 
-	//	if (v.psum(i) != ranks) {
-	//		throw;
-	//	}
+		if (v.psum(i) != ranks) {
+			throw;
+		}
 
-	//	if (v.at(i) != val) {
-	//		throw;
-	//	}
+		if (v.at(i) != val) {
+			throw;
+		}
 
-	//	if (vals != v.psum()) {
-	//		throw;
-	//	}
+		if (vals != v.psum()) {
+			throw;
+		}
+	}
+	return vals;
+}
+
+int main() {
+	uint64_t count = 0;
+
+	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
+
+	for (uint64_t i = 0; i < 8000000000; ++i) {
+		tree.insert(i >> 1, i % 2);
+	}
+
+	count += tree.size();
+
+	//for (uint64_t i = 0; i < 8000000000; ++i) {
+	//	count += tree.rank(i + 1);
 	//}
 
-	//int a = 1;
+	//return packed_vector_test();
 	//return test_sdsl();
-	/*return test_packed();*/
-	return test_packed2();
-	//test_tree< 4096, 16>();
-	//test_tree< 4096, 254>();
-	//test_tree< 4096, 1024>();
-	//test_tree< 4096, 4096>();
-	//test_tree< 4096, 8192>();
+	//count += test_packed();
+	//count += test_sdsl_array();
+	//count += test_array();
+	//count += test_tree< 4096, 16>();
+	//count += test_tree< 4096, 256>();
+	//count += test_tree< 4096, 1024>();
+	//count += test_tree< 4096, 4096>();
+	//count += test_tree< 4096, 8192>();
+	return count;
 }
 

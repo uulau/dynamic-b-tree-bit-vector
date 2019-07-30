@@ -6,8 +6,104 @@
 #include "be-spsi.hpp"
 #include "int_vector.hpp"
 #include "sdsl-bv.hpp"
+#include "util.hpp"
+#include "rank_support_v5.hpp"
 
 static uint64_t data_size = 10000;
+
+template <uint64_t T> static void SDSL2Benchmark(benchmark::State& state) {
+
+	bit_vector bv(T);
+
+	rank_support_v5 rs;
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	vector<uint64_t> queries;
+
+	for (uint64_t i = 0; i < 10000000; ++i) {
+		queries.emplace_back(distribution(generator) % T);
+	}
+
+	for (auto i = 0; i < T; i++) {
+		bv[i] = rand() % 2;
+	}
+
+	sdsl::util::init_support(rs, &bv);
+
+	uint64_t index = 0;
+	for (auto _ : state) {
+		benchmark::DoNotOptimize(rs.rank(queries[index]));
+		if (++index == T) index = 10000000;
+	}
+}
+
+//BENCHMARK_TEMPLATE(SDSL2Benchmark, 8000000000);
+
+template <uint64_t T> static void ArrayQuery(benchmark::State& state) {
+
+	bool* ar = new bool[T];
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	vector<uint64_t> queries;
+
+	for (uint64_t i = 0; i < 10000000; ++i) {
+		queries.emplace_back(distribution(generator) % T);
+	}
+
+	for (auto i = 0; i < T; i++) {
+		ar[i] = rand() % 2;
+	}
+
+	for (auto _ : state) {
+		for (const auto& query : queries) {
+			benchmark::DoNotOptimize(ar[query]);
+		}
+	}
+
+	delete[] ar;
+}
+
+//BENCHMARK_TEMPLATE(ArrayQuery, 8000000000);
+
+template <uint64_t T> static void SDSLBenchmark(benchmark::State& state) {
+
+	bit_vector bv(T);
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	vector<uint64_t> queries;
+
+	for (uint64_t i = 0; i < 10000000; ++i) {
+		queries.emplace_back(distribution(generator) % T);
+	}
+
+	for (auto i = 0; i < T; i++) {
+		bv[i] = rand() % 2;
+	}
+
+	for (auto _ : state) {
+		for (const auto& query : queries) {
+			benchmark::DoNotOptimize(bv[query]);
+		}
+	}
+}
+
+//BENCHMARK_TEMPLATE(SDSLBenchmark, 8000000000);
+
 
 template <class T> static void Query(benchmark::State& state) {
 	T tree{};
@@ -173,11 +269,11 @@ template <class T> static void Operations(benchmark::State& state) {
 //BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 2048, 4096, 0, b_spsi>);
 
 //BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 4, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 16, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 16, 0, b_spsi>);
 //BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 64, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 1024, 0, b_spsi>);
-BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 4096, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 1024, 0, b_spsi>);
+//BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 4096, 4096, 0, b_spsi>);
 
 //BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 4, 0, b_spsi>);
 //BENCHMARK_TEMPLATE(Operations, succinct_bitvector<packed_vector, 8192, 16, 0, b_spsi>);

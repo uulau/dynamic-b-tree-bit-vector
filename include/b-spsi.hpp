@@ -1680,13 +1680,13 @@ namespace dyn {
 			 * helper functions for child search
 			 */
 			inline uint64_t find_child(uint64_t i) const {
-				return linear_skip(16, i, nr_children);
-				//uint64_t j = 0;
-				//while (subtree_sizes[j] <= i) {
-				//	j++;
-				//	assert(j < subtree_sizes.size());
-				//}
-				//return j;
+				//return linear_skip(16, i, nr_children);
+				uint64_t j = 0;
+				while (subtree_sizes[j] <= i) {
+					j++;
+					assert(j < subtree_sizes.size());
+				}
+				return j;
 				//auto begin = subtree_sizes.begin();
 				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
 			}
