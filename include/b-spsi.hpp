@@ -727,7 +727,7 @@ namespace dyn {
 			 *
 			 */
 			template <typename... Args>
-			node* insert(uint64_t i, Args... args) {
+			node* insert(uint64_t i, uint64_t val, Args... args) {
 				assert(i <= size());
 				assert(is_root() || not parent->is_full());
 
@@ -742,12 +742,12 @@ namespace dyn {
 
 					// insert recursively
 					if (i < size()) {
-						insert_without_split(i, args...);
+						insert_without_split(i, val, args...);
 
 					}
 					else {
 						assert(right != NULL);
-						right->insert_without_split(i - size(), args...);
+						right->insert_without_split(i - size(), val, args...);
 					}
 
 					// if this is the root, create new root
@@ -767,7 +767,7 @@ namespace dyn {
 
 				}
 				else {
-					insert_without_split(i, args...);
+					insert_without_split(i, val, args...);
 				}
 
 				// if not root, do not return anything.
@@ -1529,7 +1529,7 @@ namespace dyn {
 			 * insert in a node, where we know that this node is not full
 			 */
 			template <typename... Args>
-			void insert_without_split(uint64_t i, Args... args) {
+			void insert_without_split(uint64_t i, uint64_t val, Args... args) {
 				assert(not is_full());
 				assert(i <= size());
 
@@ -1552,11 +1552,15 @@ namespace dyn {
 					assert(insert_pos <= children[j]->size());
 					assert(children[j]->get_parent() == this);
 
-					children[j]->insert(insert_pos, args...);
+					//++subtree_sizes[j];
+					//subtree_psums[j] += val;
+					children[j]->insert(insert_pos, val, args...);
 
 				}
 				else {
-					auto* new_leaf = insert_into_leaf(leaves[j], insert_pos, args...);
+					//++subtree_sizes[j];
+					//subtree_psums[j] += val;
+					auto* new_leaf = insert_into_leaf(leaves[j], insert_pos, val, args...);
 					if (new_leaf)
 						new_children(j, leaves[j], new_leaf);
 				}
@@ -1680,14 +1684,29 @@ namespace dyn {
 			 */
 			inline uint64_t find_child(uint64_t i) const {
 				//return linear_skip(16, i, nr_children);
-				//uint64_t j = 0;
-				//while (subtree_sizes[j] <= i) {
-				//	j++;
-				//	assert(j < subtree_sizes.size());
+
+				uint64_t j = 0;
+				while (subtree_sizes[j] <= i) {
+					j++;
+					assert(j < subtree_sizes.size());
+				}
+				return j;
+
+				//int j = 0;
+
+				//if (i < subtree_sizes[j]) return j;
+
+				//while (true) {
+				//	if (i < subtree_sizes[++j]) return j;
+				//	if (i < subtree_sizes[++j]) return j;
+				//	if (i < subtree_sizes[++j]) return j;
+				//	if (i < subtree_sizes[++j]) return j;
+				//	if (i < subtree_sizes[++j]) return j;
+				//	if (i < subtree_sizes[++j]) return j;
 				//}
-				//return j;
-				auto begin = subtree_sizes.begin();
-				return upper_bound(begin, begin + nr_children - 1, i) - begin;
+
+				//auto begin = subtree_sizes.begin();
+				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
 			}
 
 			inline uint64_t find_1(uint64_t x) const {

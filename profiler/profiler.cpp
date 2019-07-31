@@ -1,4 +1,4 @@
-#include "packed_vector2.hpp"
+#include "packed_vector.hpp"
 #include "succinct-bitvector.hpp"
 #include "sdsl-bv.hpp"
 #include "b-spsi.hpp"
@@ -337,13 +337,21 @@ int main() {
 
 	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
 
-	for (uint64_t i = 0; i < 8000000000; i += 64) {
-		tree.push_word(i, 64);
+	for (uint64_t i = 0; i < 80000000; ++i) {
+		tree.insert(i >> 2, i % 2);
+
+		if (tree.at(i >> 2) != (i % 2)) throw;
 	}
 
-	for (uint64_t ranks = 0; ranks < 8000000000; ++ranks) {
-		count += tree.rank(ranks + 1);
-	}
+	count += tree.size();
+
+	//for (uint64_t i = 0; i < 8000000000; i += 64) {
+	//	tree.push_word(i, 64);
+	//}
+
+	//for (uint64_t ranks = 0; ranks < 8000000000; ++ranks) {
+	//	count += tree.rank(ranks + 1);
+	//}
 
 	//count += tree.size();
 

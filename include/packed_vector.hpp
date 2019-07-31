@@ -466,7 +466,7 @@ namespace dyn {
 				psum_ += value;
 
 				if (i != vals.size() - 1 && word) {
-					if (auto next_word = fast_div(std::get<0>(vals[i + 1])); next_word < word - 1) {
+					if (auto next_word = fast_div(std::get<0>(vals[i + uint64_t(1)])); next_word < word - 1) {
 						for (auto c_word = word - 1; c_word > next_word; --c_word) {
 							words[c_word] >>= inserts - i;
 							for (int offset = 0; offset < inserts - i; ++offset) {
