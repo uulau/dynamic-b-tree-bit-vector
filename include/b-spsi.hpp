@@ -283,8 +283,7 @@ namespace dyn {
 			}
 
 			void load(istream& in) {
-				l
-					root = new node();
+				root = new node();
 				root->load(in);
 			}
 
@@ -1681,14 +1680,14 @@ namespace dyn {
 			 */
 			inline uint64_t find_child(uint64_t i) const {
 				//return linear_skip(16, i, nr_children);
-				uint64_t j = 0;
-				while (subtree_sizes[j] <= i) {
-					j++;
-					assert(j < subtree_sizes.size());
-				}
-				return j;
-				//auto begin = subtree_sizes.begin();
-				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
+				//uint64_t j = 0;
+				//while (subtree_sizes[j] <= i) {
+				//	j++;
+				//	assert(j < subtree_sizes.size());
+				//}
+				//return j;
+				auto begin = subtree_sizes.begin();
+				return upper_bound(begin, begin + nr_children - 1, i) - begin;
 			}
 
 			inline uint64_t find_1(uint64_t x) const {

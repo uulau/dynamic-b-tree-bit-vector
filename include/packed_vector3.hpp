@@ -77,25 +77,19 @@ namespace dyn {
 			uint64_t pos = 0;
 
 			//auto const max = fast_div(i);
+			//auto const mod = fast_mod(i);
+
 			//for (uint64_t j = 0; j < max; ++j) {
 			//	s += __builtin_popcountll(words[j]);
 			//	pos += 64;
 			//}
-			//auto const mod = fast_mod(i);
-			//if (mod) {
-			//	s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
-			//}
 
-			// Amount of bytes (i / 8)
-			auto const max = i >> 6;
-			auto const max_byte = i >> 3;
-			s += popcnt(words.data(), max_byte);
+			s += popcnt(words.data(), i >> 3);
 
-			// Remainder
-			auto const mod = i & 7;
+			auto const mod = i & 63 & 7;
 
 			if (mod) {
-				s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
+				s += __builtin_popcountll(words[i >> 6] & ((uint64_t(1) << mod) - 1));
 			}
 
 			return s;

@@ -1,12 +1,12 @@
 #include "gtest.h"
 #include "helpers.hpp"
 #include "succinct-bitvector.hpp"
-#include "packed_vector3.hpp"
+#include "packed_vector.hpp"
 #include "b-spsi.hpp"
 #include "be-spsi.hpp"
 #include "sdsl-bv.hpp"
 
-typedef succinct_bitvector<packed_vector, 256, 16, 0, b_spsi> bbv;
+typedef succinct_bitvector<packed_vector, 4056, 256, 0, b_spsi> bbv;
 typedef succinct_bitvector<packed_vector, 64, 1, 1, be_spsi> bebv;
 typedef sdsl_bv<64, 256> sdslbv;
 

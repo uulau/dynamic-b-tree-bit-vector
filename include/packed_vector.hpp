@@ -380,64 +380,92 @@ namespace dyn {
 				&& "uninitialized non-zero values in the end of the vector");
 		}
 
-		void flush_messages()
+		template <bool partial> void flush_messages()
 		{
-			auto i0 = buffer.i0;
-			auto i1 = buffer.i1;
-			auto i2 = buffer.i2;
-			auto i3 = buffer.i3;
+			std::vector<std::tuple<uint64_t, bool>> vals;
 
-			if (i3 < i2) --i2;
-			if (i3 < i1) --i1;
-			if (i3 < i0) --i0;
-			if (i2 < i1) --i1;
-			if (i2 < i0) --i0;
-			if (i1 < i0) --i0;
-
-			if (buffer.i0 != max_bits) {
-				insert_no_buffer(i0, buffer.val0);
-				buffer.i0 = max_bits;
+			// Split might cause a partial flush
+			if constexpr (partial) {
+				if (buffer.i3 != max_bits) {
+					vals =
+					{
+						{ buffer.i3, buffer.val3 },
+						{ buffer.i2, buffer.val2 },
+						{ buffer.i1, buffer.val1 },
+						{ buffer.i0, buffer.val0 }
+					};
+				}
+				else if (buffer.i2 != max_bits) {
+					vals =
+					{
+						{ buffer.i2, buffer.val2 },
+						{ buffer.i1, buffer.val1 },
+						{ buffer.i0, buffer.val0 }
+					};
+				}
+				else if (buffer.i0 != max_bits) {
+					vals =
+					{
+						{ buffer.i1, buffer.val1 },
+						{ buffer.i0, buffer.val0 }
+					};
+				}
+				else if (buffer.i0 != max_bits) {
+					vals =
+					{
+						{ buffer.i0, buffer.val0 }
+					};
+				}
 			}
-			if (buffer.i1 != max_bits) {
-				insert_no_buffer(i1, buffer.val1);
-				buffer.i1 = max_bits;
+			else {
+				vals =
+				{
+					{ buffer.i0, buffer.val0},
+					{ buffer.i1, buffer.val1},
+					{ buffer.i2, buffer.val2},
+					{ buffer.i3, buffer.val3}
+				};
 			}
 
-			if (buffer.i2 != max_bits) {
-				insert_no_buffer(i2, buffer.val2);
-				buffer.i2 = max_bits;
+			// Sort insertions in descending order
+			std::sort(vals.begin(), vals.end(), [](const std::tuple<uint64_t, bool> a, const std::tuple<uint64_t, bool> b) -> bool
+				{
+					return std::get<0>(a) > std::get<0>(b);
+				});
+
+			const auto word_count = words.size();
+			const auto inserts = vals.size();
+
+			auto curr_size = size();
+
+			if (!word_count || (fast_div(curr_size) + 1) > word_count) {
+				words.emplace_back(0);
 			}
 
-			if (buffer.i3 != max_bits) {
-				insert_no_buffer(i3, buffer.val3);
-				buffer.i3 = max_bits;
+			--curr_size;
+
+			for (auto i = 0; i < vals.size(); ++i) {
+				auto insertion = vals[i];
+				const auto index = std::get<0>(insertion);
+				const auto value = std::get<1>(insertion);
+				while (curr_size != index) {
+					auto word = fast_div(curr_size);
+					auto index_in_word = fast_mod(curr_size);
+					auto val_now = MASK & (words[word] >> (index_in_word - (inserts - i)));
+					words[word] = (words[word] & ~(MASK << index_in_word)) | (uint64_t(val_now) << index_in_word);
+					--curr_size;
+				}
+				auto word = fast_div(curr_size);
+				auto index_in_word = fast_mod(curr_size);
+				words[word] = (words[word] & ~(MASK << index_in_word)) | (uint64_t(value) << index_in_word);
+				++size_;
+				psum_ += value;
 			}
-		}
 
-		void insert_no_buffer(uint64_t i, uint64_t x) {
-			//if (i == size_) {
-			//	push_back(x);
-			//	return;
-			//}
-
-			if (size_ + 1 > fast_mul(words.size())) {
-				words.reserve(words.size() + extra_);
-				words.resize(words.size() + extra_, 0);
-			}
-
-			//shift right elements starting from number i
-			shift_right(i);
-
-			//insert x
-			set<false>(i, x);
-
-			psum_ += x;
-			++size_;
-
-			//assert(size_ / int_per_word_ <= words.size());
-			//assert((size_ / int_per_word_ == words.size()
-			//	|| !(words[size_ / int_per_word_] >> ((size_ % int_per_word_) * width_)))
-			//	&& "uninitialized non-zero values in the end of the vector");
+			buffer.i0 = max_bits;
+			buffer.i1 = max_bits;
+			buffer.i2 = max_bits;
+			buffer.i3 = max_bits;
 		}
 
 		void insert(uint64_t i, uint64_t x, bool bypass_buffer = false) {
@@ -481,7 +509,7 @@ namespace dyn {
 			}
 			case 4:
 			{
-				flush_messages();
+				flush_messages<false>();
 				insert(i, x);
 				break;
 			}
@@ -530,7 +558,7 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-			flush_messages();
+			flush_messages<true>();
 			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
@@ -681,38 +709,6 @@ namespace dyn {
 				falling_out = falling_out_temp;
 			}
 		}
-
-		//void flush_shift() {
-		//	// Adds insertions to vector for sorting
-		//	std::vector<std::tuple<uint64_t, uint64_t, bool>> vals =
-		//	{ { buffer.i0, fast_div(buffer.i0), buffer.val0},
-		//	{ buffer.i1, fast_div(buffer.i1), buffer.val1 },
-		//	{ buffer.i2, fast_div(buffer.i2), buffer.val2 },
-		//	{ buffer.i3, fast_div(buffer.i3), buffer.val3 } };
-
-		//	// Sort insertions in descending order
-		//	std::sort(vals.begin(), vals.end(), [](const std::tuple<uint64_t, bool> a, const std::tuple<uint64_t, bool> b) -> bool
-		//		{
-		//			return std::get<0>(a) > std::get<0>(b);
-		//		});
-
-		//	// Start from last word
-		//	uint64_t current_word = words.size() - 1;
-		//	// Integer that falls out from the right of current word
-		//	uint64_t falling_out = 0;
-		//	uint8_t shift_count = 4;
-
-		//	auto insertion_index = 0;
-		//	for (auto word_index = words.size - 1; word_index >= 0; --word_index) {
-		//		auto word = words[word_index];
-		//		auto insertion = vals[insertion_index];
-		//		
-		//		bool contained
-		//		for (int i = insertion_index; i < vals.size(); ++i) {
-
-		//		}
-		//	}
-		//}
 
 		//shift left of 1 position elements starting
 		//from the (i + 1)-st.

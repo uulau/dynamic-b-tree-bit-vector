@@ -40,7 +40,7 @@ if(MSVC)
   add_compile_options(/W4)
   add_compile_options(/arch:AVX2)
 else()
-  add_compile_options(-Wall -Wextra -pedantic)
+  add_compile_options(-Wall -Wextra -pedantic -mavx2)
 endif()
 
 include_directories ("include" "include/sdsl")

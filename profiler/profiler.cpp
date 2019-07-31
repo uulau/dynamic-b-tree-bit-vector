@@ -341,7 +341,7 @@ int main() {
 		tree.insert(i >> 1, i % 2);
 	}
 
-	count += tree.size();
+	//count += tree.size();
 
 	//for (uint64_t i = 0; i < 8000000000; ++i) {
 	//	count += tree.rank(i + 1);
@@ -357,6 +357,16 @@ int main() {
 	//count += test_tree< 4096, 1024>();
 	//count += test_tree< 4096, 4096>();
 	//count += test_tree< 4096, 8192>();
+	//count += test_tree< 4096, 2 * 8192>();
+	//count += test_tree< 4096, 3 * 8192>();
+	//count += test_tree< 4096, 65536>();
+	//count += test_tree< 2 * 4096, 1024>();
+	//count += test_tree< 4 * 4096, 1024>();
+	//count += test_tree< 6 * 4096, 1024>();
+	//count += test_tree< 8 * 4096, 1024>();
+	//count += test_tree< 12 * 4096, 1024>();
+	//count += test_tree< 16 * 4096, 1024>();
+	//count += packed_vector_test();
 	return count;
 }
 
