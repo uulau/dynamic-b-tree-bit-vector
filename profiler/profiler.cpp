@@ -337,8 +337,12 @@ int main() {
 
 	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
 
-	for (uint64_t i = 0; i < 8000000000; ++i) {
-		tree.insert(i >> 1, i % 2);
+	for (uint64_t i = 0; i < 8000000000; i += 64) {
+		tree.push_word(i, 64);
+	}
+
+	for (uint64_t ranks = 0; ranks < 8000000000; ++ranks) {
+		count += tree.rank(ranks + 1);
 	}
 
 	//count += tree.size();

@@ -445,13 +445,17 @@ namespace dyn {
 			--curr_size;
 
 			for (auto i = 0; i < vals.size(); ++i) {
-				auto insertion = vals[i];
+				const auto insertion = vals[i];
 				const auto index = std::get<0>(insertion);
 				const auto value = std::get<1>(insertion);
 				while (curr_size != index) {
-					auto word = fast_div(curr_size);
-					auto index_in_word = fast_mod(curr_size);
-					auto val_now = MASK & (words[word] >> (index_in_word - (inserts - i)));
+					const auto word = fast_div(curr_size);
+					const auto index_in_word = fast_mod(curr_size);
+
+					const auto old_word = fast_div(curr_size - (inserts - i));
+					const auto old_index_in_word = fast_mod(curr_size - (inserts - i));
+					const auto val_now = MASK & (words[old_word] >> old_index_in_word);
+
 					words[word] = (words[word] & ~(MASK << index_in_word)) | (uint64_t(val_now) << index_in_word);
 					--curr_size;
 				}
@@ -460,6 +464,18 @@ namespace dyn {
 				words[word] = (words[word] & ~(MASK << index_in_word)) | (uint64_t(value) << index_in_word);
 				++size_;
 				psum_ += value;
+
+				if (i != vals.size() - 1 && word) {
+					if (auto next_word = fast_div(std::get<0>(vals[i + 1])); next_word < word - 1) {
+						for (auto c_word = word - 1; c_word > next_word; --c_word) {
+							words[c_word] >>= inserts - i;
+							for (int offset = 0; offset < inserts - i; ++offset) {
+								words[c_word] = (words[c_word] & ~(MASK << offset)) | (uint64_t(MASK & (words[c_word - 1] >> 63 - offset)) << offset);
+							}
+							curr_size -= 64;
+						}
+					}
+				}
 			}
 
 			buffer.i0 = max_bits;
