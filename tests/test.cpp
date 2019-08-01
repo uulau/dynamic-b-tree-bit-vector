@@ -1,7 +1,7 @@
 #include "gtest.h"
 #include "helpers.hpp"
 #include "succinct-bitvector.hpp"
-#include "packed_vector.hpp"
+#include "packed_vector4.hpp"
 #include "b-spsi.hpp"
 #include "be-spsi.hpp"
 #include "sdsl-bv.hpp"
