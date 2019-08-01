@@ -1552,48 +1552,48 @@ namespace dyn {
 					assert(insert_pos <= children[j]->size());
 					assert(children[j]->get_parent() == this);
 
-					//++subtree_sizes[j];
-					//subtree_psums[j] += val;
+					++subtree_sizes[j];
+					subtree_psums[j] += val;
 					children[j]->insert(insert_pos, val, args...);
 
 				}
 				else {
-					//++subtree_sizes[j];
-					//subtree_psums[j] += val;
+					++subtree_sizes[j];
+					subtree_psums[j] += val;
 					auto* new_leaf = insert_into_leaf(leaves[j], insert_pos, val, args...);
 					if (new_leaf)
 						new_children(j, leaves[j], new_leaf);
 				}
 
-				uint64_t ps = (j == 0 ? 0 : subtree_psums[j - 1]);
-				uint64_t si = (j == 0 ? 0 : subtree_sizes[j - 1]);
+				//uint64_t ps = (j == 0 ? 0 : subtree_psums[j - 1]);
+				//uint64_t si = (j == 0 ? 0 : subtree_sizes[j - 1]);
 
 				/*
 				 * we inserted an integer in some children, and number of
 				 * children may have increased. re-compute counters
 				 */
 
-				assert(not has_leaves() or nr_children <= leaves.size());
-				assert(has_leaves() or nr_children <= children.size());
-				assert(nr_children <= subtree_psums.size());
-				assert(nr_children <= subtree_sizes.size());
+				//assert(not has_leaves() or nr_children <= leaves.size());
+				//assert(has_leaves() or nr_children <= children.size());
+				//assert(nr_children <= subtree_psums.size());
+				//assert(nr_children <= subtree_sizes.size());
 
-				for (uint32_t k = j; k < nr_children; ++k) {
-					if (has_leaves()) {
-						assert(leaves[k] != NULL);
-						ps += leaves[k]->psum();
-						si += leaves[k]->size();
+				//for (uint32_t k = j; k < nr_children; ++k) {
+				//	if (has_leaves()) {
+				//		assert(leaves[k] != NULL);
+				//		ps += leaves[k]->psum();
+				//		si += leaves[k]->size();
 
-					}
-					else {
-						assert(children[k] != NULL);
-						ps += children[k]->psum();
-						si += children[k]->size();
-					}
+				//	}
+				//	else {
+				//		assert(children[k] != NULL);
+				//		ps += children[k]->psum();
+				//		si += children[k]->size();
+				//	}
 
-					subtree_psums[k] = ps;
-					subtree_sizes[k] = si;
-				}
+				//	subtree_psums[k] = ps;
+				//	subtree_sizes[k] = si;
+				//}
 			}
 
 			/*

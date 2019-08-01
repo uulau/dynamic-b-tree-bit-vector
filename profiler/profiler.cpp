@@ -1,4 +1,4 @@
-#include "packed_vector.hpp"
+#include "packed_vector2.hpp"
 #include "succinct-bitvector.hpp"
 #include "sdsl-bv.hpp"
 #include "b-spsi.hpp"
@@ -340,7 +340,7 @@ int main() {
 	for (uint64_t i = 0; i < 80000000; ++i) {
 		tree.insert(i >> 2, i % 2);
 
-		if (tree.at(i >> 2) != (i % 2)) throw;
+		//if (tree.at(i >> 2) != (i % 2)) throw;
 	}
 
 	count += tree.size();

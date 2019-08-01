@@ -464,6 +464,7 @@ namespace dyn {
 				words[word] = (words[word] & ~(MASK << index_in_word)) | (uint64_t(value) << index_in_word);
 				++size_;
 				psum_ += value;
+				--curr_size;
 
 				if (i != vals.size() - 1 && word) {
 					if (auto next_word = fast_div(std::get<0>(vals[i + uint64_t(1)])); next_word < word - 1) {
