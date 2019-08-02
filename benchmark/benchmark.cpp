@@ -11,6 +11,22 @@
 
 static uint64_t data_size = 10000;
 
+static void TreeInsertion(benchmark::State& state) {
+	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
+
+	uint64_t inserts = 0;
+
+	for (auto _ : state) {
+		tree.insert(inserts >> 1, inserts & 2);
+		tree.insert(0, inserts & 2);
+		tree.insert(inserts, inserts & 2);
+		++inserts;
+		benchmark::ClobberMemory();
+	}
+}
+
+BENCHMARK(TreeInsertion);
+
 template <uint64_t T> static void SDSL2Benchmark(benchmark::State& state) {
 
 	bit_vector bv(T);

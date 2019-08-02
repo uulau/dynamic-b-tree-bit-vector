@@ -343,7 +343,7 @@ namespace dyn {
 			assert(size_ > nr_left_ints);
 			uint64_t nr_right_ints = size_ - nr_left_ints;
 
-			//assert(words.begin() + nr_left_words + extra_ < words.end());
+			assert(words.begin() + nr_left_words + extra_ < words.end());
 			assert(words.begin() + tot_words <= words.end());
 			std::vector<uint64_t> right_words(tot_words - nr_left_words + extra_, 0);
 			std::copy(words.begin() + nr_left_words, words.begin() + tot_words, right_words.begin());

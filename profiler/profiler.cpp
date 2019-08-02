@@ -339,8 +339,6 @@ int main() {
 
 	for (uint64_t i = 0; i < 80000000; ++i) {
 		tree.insert(i >> 2, i % 2);
-
-		//if (tree.at(i >> 2) != (i % 2)) throw;
 	}
 
 	count += tree.size();

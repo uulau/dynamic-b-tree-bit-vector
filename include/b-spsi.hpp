@@ -22,6 +22,7 @@
 
 using namespace std;
 
+#include <immintrin.h>
 #include <array>
 #include <fstream>
 #include "spsi-reference.hpp"
@@ -1547,19 +1548,37 @@ namespace dyn {
 				// i-th element is in the j-th children
 				uint64_t insert_pos = i - previous_size;
 
+				uint32_t index = j;
+
+				while (nr_children - index > 1) {
+					auto one_mask = _mm_set_epi64x(uint64_t(1), uint64_t(1));
+					auto val_mask = _mm_set_epi64x(val, val);
+
+					auto sum_vec = _mm_loadu_si128((__m128i*) & subtree_psums[index]);
+					auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
+
+					auto sum_val_vec = _mm_add_epi64(sum_vec, val_mask);
+					auto size_val_vec = _mm_add_epi64(size_vec, one_mask);
+
+					_mm_store_si128(&sum_vec, sum_val_vec);
+					_mm_store_si128(&size_vec, sum_val_vec);
+
+					index += 2;
+				}
+
+				while (index < nr_children) {
+					++subtree_sizes[index];
+					subtree_psums[index] += val;
+					++index;
+				}
+
 				if (not has_leaves()) {
 					assert(not is_full());
 					assert(insert_pos <= children[j]->size());
 					assert(children[j]->get_parent() == this);
-
-					++subtree_sizes[j];
-					subtree_psums[j] += val;
 					children[j]->insert(insert_pos, val, args...);
-
 				}
 				else {
-					++subtree_sizes[j];
-					subtree_psums[j] += val;
 					auto* new_leaf = insert_into_leaf(leaves[j], insert_pos, val, args...);
 					if (new_leaf)
 						new_children(j, leaves[j], new_leaf);
@@ -1573,27 +1592,27 @@ namespace dyn {
 				 * children may have increased. re-compute counters
 				 */
 
-				//assert(not has_leaves() or nr_children <= leaves.size());
-				//assert(has_leaves() or nr_children <= children.size());
-				//assert(nr_children <= subtree_psums.size());
-				//assert(nr_children <= subtree_sizes.size());
+				 //assert(not has_leaves() or nr_children <= leaves.size());
+				 //assert(has_leaves() or nr_children <= children.size());
+				 //assert(nr_children <= subtree_psums.size());
+				 //assert(nr_children <= subtree_sizes.size());
 
-				//for (uint32_t k = j; k < nr_children; ++k) {
-				//	if (has_leaves()) {
-				//		assert(leaves[k] != NULL);
-				//		ps += leaves[k]->psum();
-				//		si += leaves[k]->size();
+				 //for (uint32_t k = j; k < nr_children; ++k) {
+				 //	if (has_leaves()) {
+				 //		assert(leaves[k] != NULL);
+				 //		ps += leaves[k]->psum();
+				 //		si += leaves[k]->size();
 
-				//	}
-				//	else {
-				//		assert(children[k] != NULL);
-				//		ps += children[k]->psum();
-				//		si += children[k]->size();
-				//	}
+				 //	}
+				 //	else {
+				 //		assert(children[k] != NULL);
+				 //		ps += children[k]->psum();
+				 //		si += children[k]->size();
+				 //	}
 
-				//	subtree_psums[k] = ps;
-				//	subtree_sizes[k] = si;
-				//}
+				 //	subtree_psums[k] = ps;
+				 //	subtree_sizes[k] = si;
+				 //}
 			}
 
 			/*
@@ -1685,12 +1704,27 @@ namespace dyn {
 			inline uint64_t find_child(uint64_t i) const {
 				//return linear_skip(16, i, nr_children);
 
-				uint64_t j = 0;
-				while (subtree_sizes[j] <= i) {
-					j++;
-					assert(j < subtree_sizes.size());
+				auto index = 0;
+
+				while (nr_children - index > 1) {
+					auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
+					auto val_mask = _mm_set_epi64x(i, i);
+					auto zero_mask = _mm_setzero_si128();
+
+					auto result_vec _mm_cmpgt_epi64(size_vec, val_mask);
+
+					_mm_store_si128(&sum_vec, sum_val_vec);
+					_mm_store_si128(&size_vec, sum_val_vec);
+
+					index += 2;
 				}
-				return j;
+
+				//uint64_t j = 0;
+				//while (subtree_sizes[j] <= i) {
+				//	j++;
+				//	assert(j < subtree_sizes.size());
+				//}
+				//return j;
 
 				//int j = 0;
 
