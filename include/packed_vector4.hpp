@@ -443,18 +443,20 @@ namespace dyn {
 			assert(int_per_word_ > 0);
 			assert(size_ + 1 <= fast_mul(words.size()));
 
+			uint64_t index = fast_mod(i);
+
 			//integer that falls out from the right of current word
 			uint64_t falling_out = 0;
 
 			auto val = fast_mul(current_word);
 			if (val < i) {
-				falling_out = (words[current_word] >> (int_per_word_ - 1)) & uint64_t(1);
-				uint64_t falling_out_idx = std::min(val + (int_per_word_ - 1), size_);
-				for (uint64_t j = falling_out_idx; j > i; --j) {
-					assert(j - 1 < size_);
-					set<false>(j, at(j - 1), fast_div(i));
-				}
-
+				falling_out = (words[current_word] >> (int_per_word_ - 1) * width_) & uint64_t(1);
+				uint64_t word = words[current_word];
+				uint64_t one_mask = (uint64_t(1) << index) - 1;
+				uint64_t zero_mask = ~one_mask;
+				uint64_t unchanged = word & one_mask;
+				word <<= 1;
+				words[current_word] = (word & zero_mask) | unchanged;
 				current_word++;
 			}
 

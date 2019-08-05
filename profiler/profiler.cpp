@@ -1,4 +1,4 @@
-#include "packed_vector2.hpp"
+#include "packed_vector.hpp"
 #include "succinct-bitvector.hpp"
 #include "sdsl-bv.hpp"
 #include "b-spsi.hpp"
@@ -337,11 +337,11 @@ int main() {
 
 	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
 
-	//for (uint64_t i = 0; i < 80000000; ++i) {
-	//	tree.insert(i >> 2, i % 2);
-	//}
+	for (uint64_t i = 0; i < 800000000; ++i) {
+		tree.insert(i >> 2, i % 2);
+	}
 
-	//count += tree.size();
+	count += tree.size();
 
 	//for (uint64_t i = 0; i < 8000000000; i += 64) {
 	//	tree.push_word(i, 64);
@@ -372,11 +372,11 @@ int main() {
 	//count += test_packed();
 	//count += test_sdsl_array();
 	//count += test_array();
-	count += test_tree< 4096, 16>();
-	count += test_tree< 4096, 256>();
-	count += test_tree< 4096, 1024>();
-	count += test_tree< 4096, 4096>();
-	count += test_tree< 4096, 8192>();
+	//count += test_tree< 4096, 16>();
+	//count += test_tree< 4096, 256>();
+	//count += test_tree< 4096, 1024>();
+	//count += test_tree< 4096, 4096>();
+	//count += test_tree< 4096, 8192>();
 	//count += test_tree< 4096, 2 * 8192>();
 	//count += test_tree< 4096, 3 * 8192>();
 	//count += test_tree< 4096, 65536>();

@@ -1834,7 +1834,7 @@ namespace dyn {
 			inline uint64_t find_child(uint64_t i) const {
 				//return linear_skip(16, i, nr_children);
 
-				uint64_t index = 0;
+				//uint64_t index = 0;
 
 				//while (nr_children - index > 1) {
 				//	uint64_t result[2];
@@ -1849,15 +1849,15 @@ namespace dyn {
 				//	index += 2;
 				//}
 
-				while (subtree_sizes[index] <= i) {
-					index++;
-					assert(index < subtree_sizes.size());
-				}
+				//while (subtree_sizes[index] <= i) {
+				//	index++;
+				//	assert(index < subtree_sizes.size());
+				//}
 
-				return index;
+				//return index;
 
-				//auto begin = subtree_sizes.begin();
-				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
+				auto begin = subtree_sizes.begin();
+				return upper_bound(begin, begin + nr_children - 1, i) - begin;
 
 				//uint64_t j = 0;
 				//while (subtree_sizes[j] <= i) {
