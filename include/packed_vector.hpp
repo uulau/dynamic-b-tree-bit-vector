@@ -384,46 +384,56 @@ namespace dyn {
 		{
 			std::vector<std::tuple<uint64_t, bool>> vals;
 
+			const uint64_t i0 = buffer.i0;
+			const uint64_t i1 = buffer.i1;
+			const uint64_t i2 = buffer.i2;
+			const uint64_t i3 = buffer.i3;
+
+			const bool val0 = buffer.val0;
+			const bool val1 = buffer.val1;
+			const bool val2 = buffer.val2;
+			const bool val3 = buffer.val3;
+
 			// Split might cause a partial flush
 			if constexpr (partial) {
-				if (buffer.i3 != max_bits) {
+				if (i3 != max_bits) {
 					vals =
 					{
-						{ buffer.i3, buffer.val3 },
-						{ buffer.i2, buffer.val2 },
-						{ buffer.i1, buffer.val1 },
-						{ buffer.i0, buffer.val0 }
+						{ i3, val3 },
+						{ i2, val2 },
+						{ i1, val1 },
+						{ i0, val0 }
 					};
 				}
-				else if (buffer.i2 != max_bits) {
+				else if (i2 != max_bits) {
 					vals =
 					{
-						{ buffer.i2, buffer.val2 },
-						{ buffer.i1, buffer.val1 },
-						{ buffer.i0, buffer.val0 }
+						{ i2, val2 },
+						{ i1, val1 },
+						{ i0, val0 }
 					};
 				}
-				else if (buffer.i0 != max_bits) {
+				else if (i0 != max_bits) {
 					vals =
 					{
-						{ buffer.i1, buffer.val1 },
-						{ buffer.i0, buffer.val0 }
+						{ i1, val1 },
+						{ i0, val0 }
 					};
 				}
-				else if (buffer.i0 != max_bits) {
+				else if (i0 != max_bits) {
 					vals =
 					{
-						{ buffer.i0, buffer.val0 }
+						{ i0, val0 }
 					};
 				}
 			}
 			else {
 				vals =
 				{
-					{ buffer.i0, buffer.val0},
-					{ buffer.i1, buffer.val1},
-					{ buffer.i2, buffer.val2},
-					{ buffer.i3, buffer.val3}
+					{ i0, val0},
+					{ i1, val1},
+					{ i2, val2},
+					{ i3, val3}
 				};
 			}
 

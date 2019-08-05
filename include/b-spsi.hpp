@@ -1704,20 +1704,30 @@ namespace dyn {
 			inline uint64_t find_child(uint64_t i) const {
 				//return linear_skip(16, i, nr_children);
 
-				auto index = 0;
+				uint64_t index = 0;
 
-				while (nr_children - index > 1) {
-					auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
-					auto val_mask = _mm_set_epi64x(i, i);
-					auto zero_mask = _mm_setzero_si128();
+				//while (nr_children - index > 1) {
+				//	uint64_t result[2];
+				//	auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
+				//	auto val_mask = _mm_set_epi64x(i, i);
+				//	auto result_vec = _mm_cmpgt_epi64(size_vec, val_mask);
+				//	_mm_storeu_si128((__m128i*) & result, result_vec);
 
-					auto result_vec _mm_cmpgt_epi64(size_vec, val_mask);
+				//	if (result[0] == 0xFFFFFFFFFFFFFFFF) return index;
+				//	if (result[1] == 0xFFFFFFFFFFFFFFFF) return index + 1;
 
-					_mm_store_si128(&sum_vec, sum_val_vec);
-					_mm_store_si128(&size_vec, sum_val_vec);
+				//	index += 2;
+				//}
 
-					index += 2;
+				while (subtree_sizes[index] <= i) {
+					index++;
+					assert(index < subtree_sizes.size());
 				}
+
+				return index;
+
+				//auto begin = subtree_sizes.begin();
+				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
 
 				//uint64_t j = 0;
 				//while (subtree_sizes[j] <= i) {
@@ -1738,9 +1748,6 @@ namespace dyn {
 				//	if (i < subtree_sizes[++j]) return j;
 				//	if (i < subtree_sizes[++j]) return j;
 				//}
-
-				//auto begin = subtree_sizes.begin();
-				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
 			}
 
 			inline uint64_t find_1(uint64_t x) const {

@@ -11,6 +11,119 @@
 
 static uint64_t data_size = 10000;
 
+inline uint64_t find_child1(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+{
+	int j = 0;
+	if (i < subtree_sizes[j]) return j;
+
+	while (true) {
+		if (i < subtree_sizes[++j]) return j;
+		if (i < subtree_sizes[++j]) return j;
+		if (i < subtree_sizes[++j]) return j;
+		if (i < subtree_sizes[++j]) return j;
+		if (i < subtree_sizes[++j]) return j;
+		if (i < subtree_sizes[++j]) return j;
+	}
+}
+
+inline uint64_t find_child2(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+{
+	auto begin = subtree_sizes.begin();
+	return std::upper_bound(begin, begin + subtree_sizes.size() - 1, i) - begin;
+}
+
+inline uint64_t find_child3(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+{
+	uint64_t j = 0;
+	while (subtree_sizes[j] <= i) {
+		j++;
+		assert(j < subtree_sizes.size());
+	}
+	return j;
+}
+
+inline uint64_t find_child4(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+{
+	uint64_t index = 0;
+	uint64_t result[2];
+	auto val_mask = _mm_set_epi64x(i, i);
+	while (subtree_sizes.size() - index > 1) {
+		auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
+		auto result_vec = _mm_cmpgt_epi64(size_vec, val_mask);
+		_mm_storeu_si128((__m128i*) & result, result_vec);
+		//if (result[0] == 0xFFFFFFFFFFFFFFFF) return index;
+		//if (result[1] == 0xFFFFFFFFFFFFFFFF) return index + 1;
+		index += 2;
+	}
+
+	while (index < subtree_sizes.size() && subtree_sizes[index] <= i) {
+		index++;
+		assert(index < subtree_sizes.size());
+	}
+	return index;
+}
+
+static void UnrolledLinear(benchmark::State& state) {
+	std::vector<uint64_t> vals;
+
+	for (int i = 0; i < 128; ++i) {
+		vals.push_back(i + 1);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < 128; ++i) {
+			benchmark::DoNotOptimize(find_child1(vals, i));
+		}
+	}
+}
+BENCHMARK(UnrolledLinear);
+
+static void UpperBound(benchmark::State& state) {
+	std::vector<uint64_t> vals;
+
+	for (int i = 0; i < 128; ++i) {
+		vals.push_back(i + 1);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < 128; ++i) {
+			benchmark::DoNotOptimize(find_child2(vals, i));
+		}
+	}
+}
+BENCHMARK(UpperBound);
+
+static void Linear(benchmark::State& state) {
+	std::vector<uint64_t> vals;
+
+	for (int i = 0; i < 128; ++i) {
+		vals.push_back(i + 1);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < 128; ++i) {
+			benchmark::DoNotOptimize(find_child3(vals, i));
+		}
+	}
+}
+BENCHMARK(Linear);
+
+
+static void SIMDLinear(benchmark::State& state) {
+	std::vector<uint64_t> vals;
+
+	for (int i = 0; i < 128; ++i) {
+		vals.push_back(i + 1);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < 128; ++i) {
+			benchmark::DoNotOptimize(find_child4(vals, i));
+		}
+	}
+}
+BENCHMARK(SIMDLinear);
+
 static void TreeInsertion(benchmark::State& state) {
 	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
 
@@ -25,7 +138,7 @@ static void TreeInsertion(benchmark::State& state) {
 	}
 }
 
-BENCHMARK(TreeInsertion);
+//BENCHMARK(TreeInsertion);
 
 template <uint64_t T> static void SDSL2Benchmark(benchmark::State& state) {
 
