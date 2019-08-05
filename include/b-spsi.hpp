@@ -727,8 +727,7 @@ namespace dyn {
 			 * is full and is splitted
 			 *
 			 */
-			template <typename... Args>
-			node* insert(uint64_t i, uint64_t val, Args... args) {
+			node* insert(uint64_t i, uint64_t val) {
 				assert(i <= size());
 				assert(is_root() || not parent->is_full());
 
@@ -743,12 +742,12 @@ namespace dyn {
 
 					// insert recursively
 					if (i < size()) {
-						insert_without_split(i, val, args...);
+						insert_without_split(i, val);
 
 					}
 					else {
 						assert(right != NULL);
-						right->insert_without_split(i - size(), val, args...);
+						right->insert_without_split(i - size(), val);
 					}
 
 					// if this is the root, create new root
@@ -768,7 +767,54 @@ namespace dyn {
 
 				}
 				else {
-					insert_without_split(i, val, args...);
+					insert_without_split(i, val);
+				}
+
+				// if not root, do not return anything.
+				return new_root;
+			}
+
+			node* insert(uint64_t i, uint64_t val, uint8_t width, uint8_t n) {
+				assert(i <= size());
+				assert(is_root() || not parent->is_full());
+
+				node* new_root = NULL;
+				node* right = NULL;
+
+				if (is_full()) {
+					right = split();
+
+					assert(not is_full());
+					assert(not right->is_full());
+
+					// insert recursively
+					if (i < size()) {
+						insert_without_split(i, val);
+
+					}
+					else {
+						assert(right != NULL);
+						right->insert_without_split(i - size(), val, width, n);
+					}
+
+					// if this is the root, create new root
+					if (is_root()) {
+						new_root = new node(vector<node*>{this, right});
+						assert(not new_root->is_full());
+
+						this->overwrite_parent(new_root);
+						right->overwrite_parent(new_root);
+
+					}
+					else {
+						// else: pass the info to parent
+						assert(rank() < parent->number_of_children());
+						parent->new_children(rank(), this, right);
+					}
+
+				}
+				else {
+					insert_without_split(i, val, width, n);
 				}
 
 				// if not root, do not return anything.
@@ -1529,8 +1575,7 @@ namespace dyn {
 			/*
 			 * insert in a node, where we know that this node is not full
 			 */
-			template <typename... Args>
-			void insert_without_split(uint64_t i, uint64_t val, Args... args) {
+			void insert_without_split(uint64_t i, uint64_t val) {
 				assert(not is_full());
 				assert(i <= size());
 
@@ -1576,10 +1621,10 @@ namespace dyn {
 					assert(not is_full());
 					assert(insert_pos <= children[j]->size());
 					assert(children[j]->get_parent() == this);
-					children[j]->insert(insert_pos, val, args...);
+					children[j]->insert(insert_pos, val);
 				}
 				else {
-					auto* new_leaf = insert_into_leaf(leaves[j], insert_pos, val, args...);
+					auto* new_leaf = insert_into_leaf(leaves[j], insert_pos, val);
 					if (new_leaf)
 						new_children(j, leaves[j], new_leaf);
 				}
@@ -1613,6 +1658,91 @@ namespace dyn {
 				 //	subtree_psums[k] = ps;
 				 //	subtree_sizes[k] = si;
 				 //}
+			}
+
+			void insert_without_split(uint64_t i, uint64_t val, uint8_t width, uint8_t n) {
+				assert(not is_full());
+				assert(i <= size());
+
+				uint32_t j = nr_children - 1;
+
+				// if i==size, then insert in last children
+				if (i < size())
+					j = find_child(i);
+
+				// size stored in previous counter
+				uint64_t previous_size = (j == 0 ? 0 : subtree_sizes[j - 1]);
+
+				assert(i >= previous_size);
+
+				// i-th element is in the j-th children
+				uint64_t insert_pos = i - previous_size;
+
+				uint32_t index = j;
+
+				//while (nr_children - index > 1) {
+				//	auto one_mask = _mm_set_epi64x(uint64_t(1), uint64_t(1));
+				//	auto val_mask = _mm_set_epi64x(val, val);
+
+				//	auto sum_vec = _mm_loadu_si128((__m128i*) & subtree_psums[index]);
+				//	auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
+
+				//	auto sum_val_vec = _mm_add_epi64(sum_vec, val_mask);
+				//	auto size_val_vec = _mm_add_epi64(size_vec, one_mask);
+
+				//	_mm_store_si128(&sum_vec, sum_val_vec);
+				//	_mm_store_si128(&size_vec, sum_val_vec);
+
+				//	index += 2;
+				//}
+
+				//while (index < nr_children) {
+				//	++subtree_sizes[index];
+				//	subtree_psums[index] += val;
+				//	++index;
+				//}
+
+				if (not has_leaves()) {
+					assert(not is_full());
+					assert(insert_pos <= children[j]->size());
+					assert(children[j]->get_parent() == this);
+					children[j]->insert(insert_pos, val, width, n);
+				}
+				else {
+					auto* new_leaf = insert_into_leaf(leaves[j], insert_pos, val, width, n);
+					if (new_leaf)
+						new_children(j, leaves[j], new_leaf);
+				}
+
+				uint64_t ps = (j == 0 ? 0 : subtree_psums[j - 1]);
+				uint64_t si = (j == 0 ? 0 : subtree_sizes[j - 1]);
+
+				/*
+				 * we inserted an integer in some children, and number of
+				 * children may have increased. re-compute counters
+				 */
+
+				 assert(not has_leaves() or nr_children <= leaves.size());
+				 assert(has_leaves() or nr_children <= children.size());
+				 assert(nr_children <= subtree_psums.size());
+				 assert(nr_children <= subtree_sizes.size());
+
+				 for (uint32_t k = j; k < nr_children; ++k) {
+				 	if (has_leaves()) {
+				 		assert(leaves[k] != NULL);
+				 		ps += leaves[k]->psum();
+				 		si += leaves[k]->size();
+
+				 	}
+				 	else {
+				 		assert(children[k] != NULL);
+				 		ps += children[k]->psum();
+				 		si += children[k]->size();
+				 	}
+
+				 	subtree_psums[k] = ps;
+				 	subtree_sizes[k] = si;
+				 }
 			}
 
 			/*

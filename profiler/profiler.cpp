@@ -341,6 +341,8 @@ int main() {
 	//	tree.insert(i >> 2, i % 2);
 	//}
 
+	//count += tree.size();
+
 	//for (uint64_t i = 0; i < 8000000000; i += 64) {
 	//	tree.push_word(i, 64);
 	//}
@@ -385,6 +387,7 @@ int main() {
 	//count += test_tree< 12 * 4096, 1024>();
 	//count += test_tree< 16 * 4096, 1024>();
 	//count += packed_vector_test();
+
 	return count;
 }
 
