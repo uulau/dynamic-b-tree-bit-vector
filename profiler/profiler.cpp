@@ -1,4 +1,4 @@
-#include "packed_vector.hpp"
+#include "packed_vector4.hpp"
 #include "succinct-bitvector.hpp"
 #include "sdsl-bv.hpp"
 #include "b-spsi.hpp"

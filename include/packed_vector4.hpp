@@ -464,19 +464,18 @@ namespace dyn {
 
 			uint64_t falling_out_temp;
 
-			val = fast_div(size_);
-			for (uint64_t j = current_word; j <= val; ++j) {
+			//val = fast_div(size_);
+			for (uint64_t j = current_word; j < words.size(); ++j) {
 
 				assert(j < words.size());
 
 				falling_out_temp = (words[j] >> (int_per_word_ - 1)) & uint64_t(1);
 
-				words[j] <<= 1;
+				words[j] = (words[j] << 1) | falling_out;
 
 				assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
 
-				set<false>(fast_mul(j), falling_out, j);
-
+				//set<false>(fast_mul(j), falling_out, j);
 				falling_out = falling_out_temp;
 			}
 		}
