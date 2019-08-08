@@ -9,8 +9,6 @@
 #include "util.hpp"
 #include "rank_support_v5.hpp"
 
-static uint64_t data_size = 10000;
-
 inline uint64_t find_child1(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
 {
 	int j = 0;

@@ -1606,7 +1606,7 @@ namespace dyn {
 					auto size_val_vec = _mm_add_epi64(size_vec, one_mask);
 
 					_mm_store_si128(&sum_vec, sum_val_vec);
-					_mm_store_si128(&size_vec, sum_val_vec);
+					_mm_store_si128(&size_vec, size_val_vec);
 
 					index += 2;
 				}
@@ -1908,7 +1908,7 @@ namespace dyn {
 				//	}
 				//}
 
-				//while (!index || (index < nr_children && subtree_sizes[index] > i)) {
+				//while (!index || (index < nr_children && i < subtree_sizes[index])) {
 				//	++index;
 				//	++val;
 				//}
