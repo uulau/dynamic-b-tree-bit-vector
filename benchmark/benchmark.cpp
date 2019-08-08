@@ -14,10 +14,10 @@ static uint64_t data_size = 10000;
 inline uint64_t find_child1(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
 {
 	int j = 0;
+
 	if (i < subtree_sizes[j]) return j;
 
 	while (true) {
-		if (i < subtree_sizes[++j]) return j;
 		if (i < subtree_sizes[++j]) return j;
 		if (i < subtree_sizes[++j]) return j;
 		if (i < subtree_sizes[++j]) return j;
@@ -51,8 +51,8 @@ inline uint64_t find_child4(const std::vector<uint64_t>& subtree_sizes, uint64_t
 		auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
 		auto result_vec = _mm_cmpgt_epi64(size_vec, val_mask);
 		_mm_storeu_si128((__m128i*) & result, result_vec);
-		//if (result[0] == 0xFFFFFFFFFFFFFFFF) return index;
-		//if (result[1] == 0xFFFFFFFFFFFFFFFF) return index + 1;
+		if (result[0] == 0xFFFFFFFFFFFFFFFF) return index;
+		if (result[1] == 0xFFFFFFFFFFFFFFFF) return index + 1;
 		index += 2;
 	}
 
@@ -61,6 +61,63 @@ inline uint64_t find_child4(const std::vector<uint64_t>& subtree_sizes, uint64_t
 		assert(index < subtree_sizes.size());
 	}
 	return index;
+}
+
+inline uint64_t find_child5(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+{
+	uint64_t index = 0;
+	auto counter = _mm_setzero_si128();
+	auto val_mask = _mm_set1_epi64x(i);
+
+	while (subtree_sizes.size() - index > 1) {
+		auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
+		auto result_vec = _mm_cmpgt_epi64(size_vec, val_mask);
+		counter = _mm_sub_epi64(counter, result_vec);
+		index += 2;
+	}
+
+	auto shuffle = _mm_shuffle_epi32(counter, _MM_SHUFFLE(1, 0, 3, 2));
+
+	counter = _mm_add_epi64(counter, shuffle);
+
+	auto val = _mm_cvtsi128_si64(counter);
+
+	if (!index || index < subtree_sizes.size()) {
+		if (i < subtree_sizes[index]) {
+			++val;
+			assert(index < subtree_sizes.size());
+		}
+	}
+
+	return subtree_sizes.size() - val;
+}
+
+inline uint64_t find_child6(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+{
+	uint64_t index = 0;
+	auto counter = _mm256_setzero_si256();
+	auto val_mask = _mm256_set1_epi64x(i);
+
+	while (subtree_sizes.size() - index > 3) {
+		auto size_vec = _mm256_loadu_si256((__m256i*) & subtree_sizes[index]);
+		auto result_vec = _mm256_cmpgt_epi64(size_vec, val_mask);
+		counter = _mm256_sub_epi64(counter, result_vec);
+		index += 4;
+	}
+
+	auto high = _mm256_extractf128_si256(counter, 1);
+	auto low = _mm256_extractf128_si256(counter, 0);
+	auto result = _mm_add_epi64(high, low);
+	auto shuffle = _mm_shuffle_epi32(result, _MM_SHUFFLE(1, 0, 3, 2));
+	result = _mm_add_epi64(result, shuffle);
+	auto val = _mm_cvtsi128_si64(result);
+
+	while (!index || (index < subtree_sizes.size() && subtree_sizes[index] > i)) {
+		++index;
+		++val;
+	}
+
+	return subtree_sizes.size() - val;
 }
 
 static void UnrolledLinear(benchmark::State& state) {
@@ -123,6 +180,36 @@ static void SIMDLinear(benchmark::State& state) {
 	}
 }
 BENCHMARK(SIMDLinear);
+
+static void SIMDLinearCount(benchmark::State& state) {
+	std::vector<uint64_t> vals;
+
+	for (int i = 0; i < 128; ++i) {
+		vals.push_back(i + 1);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < 128; ++i) {
+			benchmark::DoNotOptimize(find_child5(vals, i));
+		}
+	}
+}
+BENCHMARK(SIMDLinearCount);
+
+static void AVX2(benchmark::State& state) {
+	std::vector<uint64_t> vals;
+
+	for (int i = 0; i < 128; ++i) {
+		vals.push_back(i + 1);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < 128; ++i) {
+			benchmark::DoNotOptimize(find_child6(vals, i));
+		}
+	}
+}
+BENCHMARK(AVX2);
 
 static void TreeInsertion(benchmark::State& state) {
 	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;

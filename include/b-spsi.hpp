@@ -1722,27 +1722,27 @@ namespace dyn {
 				 * children may have increased. re-compute counters
 				 */
 
-				 assert(not has_leaves() or nr_children <= leaves.size());
-				 assert(has_leaves() or nr_children <= children.size());
-				 assert(nr_children <= subtree_psums.size());
-				 assert(nr_children <= subtree_sizes.size());
+				assert(not has_leaves() or nr_children <= leaves.size());
+				assert(has_leaves() or nr_children <= children.size());
+				assert(nr_children <= subtree_psums.size());
+				assert(nr_children <= subtree_sizes.size());
 
-				 for (uint32_t k = j; k < nr_children; ++k) {
-				 	if (has_leaves()) {
-				 		assert(leaves[k] != NULL);
-				 		ps += leaves[k]->psum();
-				 		si += leaves[k]->size();
+				for (uint32_t k = j; k < nr_children; ++k) {
+					if (has_leaves()) {
+						assert(leaves[k] != NULL);
+						ps += leaves[k]->psum();
+						si += leaves[k]->size();
 
-				 	}
-				 	else {
-				 		assert(children[k] != NULL);
-				 		ps += children[k]->psum();
-				 		si += children[k]->size();
-				 	}
+					}
+					else {
+						assert(children[k] != NULL);
+						ps += children[k]->psum();
+						si += children[k]->size();
+					}
 
-				 	subtree_psums[k] = ps;
-				 	subtree_sizes[k] = si;
-				 }
+					subtree_psums[k] = ps;
+					subtree_sizes[k] = si;
+				}
 			}
 
 			/*
@@ -1856,6 +1856,65 @@ namespace dyn {
 
 				//return index;
 
+				//uint64_t index = 0;
+				//auto counter = _mm_setzero_si128();
+				//auto val_mask = _mm_set1_epi64x(i);
+
+				//while (nr_children - index > 1) {
+				//	auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
+				//	auto result_vec = _mm_cmpgt_epi64(size_vec, val_mask);
+				//	counter = _mm_sub_epi64(counter, result_vec);
+				//	index += 2;
+				//}
+
+				//auto shuffle = _mm_shuffle_epi32(counter, _MM_SHUFFLE(1, 0, 3, 2));
+
+				//counter = _mm_add_epi64(counter, shuffle);
+
+				//auto val = _mm_cvtsi128_si64(counter);
+
+				//if (!index || index < nr_children) {
+				//	if (i < subtree_sizes[index]) {
+				//		++val;
+				//		assert(index < subtree_sizes.size());
+				//	}
+				//}
+
+				//return nr_children - val;
+
+				//uint64_t index = 0;
+				//auto counter = _mm256_setzero_si256();
+				//auto val_mask = _mm256_set1_epi64x(i);
+
+				//while (nr_children - index > 3) {
+				//	auto size_vec = _mm256_loadu_si256((__m256i*) & subtree_sizes[index]);
+				//	auto result_vec = _mm256_cmpgt_epi64(size_vec, val_mask);
+				//	counter = _mm256_sub_epi64(counter, result_vec);
+				//	index += 4;
+				//}
+
+				//auto high = _mm256_extractf128_si256(counter, 1);
+				//auto low = _mm256_extractf128_si256(counter, 0);
+				//auto result = _mm_add_epi64(high, low);
+				//auto shuffle = _mm_shuffle_epi32(result, _MM_SHUFFLE(1, 0, 3, 2));
+				//result = _mm_add_epi64(result, shuffle);
+				//auto val = _mm_cvtsi128_si64(result);
+
+				//if (index < nr_children) {
+				//	while (i > subtree_sizes[index]) {
+				//		++val;
+				//		++index;
+				//		assert(index < subtree_sizes.size());
+				//	}
+				//}
+
+				//while (!index || (index < nr_children && subtree_sizes[index] > i)) {
+				//	++index;
+				//	++val;
+				//}
+
+				//return nr_children - val;
+
 				auto begin = subtree_sizes.begin();
 				return upper_bound(begin, begin + nr_children - 1, i) - begin;
 
@@ -1871,7 +1930,6 @@ namespace dyn {
 				//if (i < subtree_sizes[j]) return j;
 
 				//while (true) {
-				//	if (i < subtree_sizes[++j]) return j;
 				//	if (i < subtree_sizes[++j]) return j;
 				//	if (i < subtree_sizes[++j]) return j;
 				//	if (i < subtree_sizes[++j]) return j;

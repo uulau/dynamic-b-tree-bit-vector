@@ -468,117 +468,117 @@ static inline void align_avx2(const uint8_t** p, uint64_t* size, uint64_t* cnt)
 
 #endif
 
-#if defined(HAVE_AVX512)
-
-#include <immintrin.h>
-
-#if !defined(_MSC_VER)
-  __attribute__ ((target ("avx512bw")))
-#endif
-static inline __m512i popcnt512(__m512i v)
-{
-  __m512i m1 = _mm512_set1_epi8(0x55);
-  __m512i m2 = _mm512_set1_epi8(0x33);
-  __m512i m4 = _mm512_set1_epi8(0x0F);
-  __m512i t1 = _mm512_sub_epi8(v, (_mm512_srli_epi16(v, 1) & m1));
-  __m512i t2 = _mm512_add_epi8(t1 & m2, (_mm512_srli_epi16(t1, 2) & m2));
-  __m512i t3 = _mm512_add_epi8(t2, _mm512_srli_epi16(t2, 4)) & m4;
-
-  return _mm512_sad_epu8(t3, _mm512_setzero_si512());
-}
-
-#if !defined(_MSC_VER)
-  __attribute__ ((target ("avx512bw")))
-#endif
-static inline void CSA512(__m512i* h, __m512i* l, __m512i a, __m512i b, __m512i c)
-{
-  *l = _mm512_ternarylogic_epi32(c, b, a, 0x96);
-  *h = _mm512_ternarylogic_epi32(c, b, a, 0xe8);
-}
-
-/*
- * AVX512 Harley-Seal popcount (4th iteration).
- * The algorithm is based on the paper "Faster Population Counts
- * using AVX2 Instructions" by Daniel Lemire, Nathan Kurz and
- * Wojciech Mula (23 Nov 2016).
- * @see https://arxiv.org/abs/1611.07612
- */
-#if !defined(_MSC_VER)
-  __attribute__ ((target ("avx512bw")))
-#endif
-static inline uint64_t popcnt_avx512(const __m512i* data, const uint64_t size)
-{
-  __m512i cnt = _mm512_setzero_si512();
-  __m512i ones = _mm512_setzero_si512();
-  __m512i twos = _mm512_setzero_si512();
-  __m512i fours = _mm512_setzero_si512();
-  __m512i eights = _mm512_setzero_si512();
-  __m512i sixteens = _mm512_setzero_si512();
-  __m512i twosA, twosB, foursA, foursB, eightsA, eightsB;
-
-  uint64_t i = 0;
-  uint64_t limit = size - size % 16;
-  uint64_t* cnt64;
-
-  for(; i < limit; i += 16)
-  {
-    CSA512(&twosA, &ones, ones, data[i+0], data[i+1]);
-    CSA512(&twosB, &ones, ones, data[i+2], data[i+3]);
-    CSA512(&foursA, &twos, twos, twosA, twosB);
-    CSA512(&twosA, &ones, ones, data[i+4], data[i+5]);
-    CSA512(&twosB, &ones, ones, data[i+6], data[i+7]);
-    CSA512(&foursB, &twos, twos, twosA, twosB);
-    CSA512(&eightsA, &fours, fours, foursA, foursB);
-    CSA512(&twosA, &ones, ones, data[i+8], data[i+9]);
-    CSA512(&twosB, &ones, ones, data[i+10], data[i+11]);
-    CSA512(&foursA, &twos, twos, twosA, twosB);
-    CSA512(&twosA, &ones, ones, data[i+12], data[i+13]);
-    CSA512(&twosB, &ones, ones, data[i+14], data[i+15]);
-    CSA512(&foursB, &twos, twos, twosA, twosB);
-    CSA512(&eightsB, &fours, fours, foursA, foursB);
-    CSA512(&sixteens, &eights, eights, eightsA, eightsB);
-
-    cnt = _mm512_add_epi64(cnt, popcnt512(sixteens));
-  }
-
-  cnt = _mm512_slli_epi64(cnt, 4);
-  cnt = _mm512_add_epi64(cnt, _mm512_slli_epi64(popcnt512(eights), 3));
-  cnt = _mm512_add_epi64(cnt, _mm512_slli_epi64(popcnt512(fours), 2));
-  cnt = _mm512_add_epi64(cnt, _mm512_slli_epi64(popcnt512(twos), 1));
-  cnt = _mm512_add_epi64(cnt, popcnt512(ones));
-
-  for(; i < size; i++)
-    cnt = _mm512_add_epi64(cnt, popcnt512(data[i]));
-
-  cnt64 = (uint64_t*) &cnt;
-
-  return cnt64[0] +
-         cnt64[1] +
-         cnt64[2] +
-         cnt64[3] +
-         cnt64[4] +
-         cnt64[5] +
-         cnt64[6] +
-         cnt64[7];
-}
-
-/* Align memory to 64 bytes boundary */
-static inline void align_avx512(const uint8_t** p, uint64_t* size, uint64_t* cnt)
-{
-  for (; (uintptr_t) *p % 8; (*p)++)
-  {
-    *cnt += popcnt64(**p);
-    *size -= 1;
-  }
-  for (; (uintptr_t) *p % 64; (*p) += 8)
-  {
-    *cnt += popcnt64(
-        *(const uint64_t*) *p);
-    *size -= 8;
-  }
-}
-
-#endif
+//#if defined(HAVE_AVX512)
+//
+//#include <immintrin.h>
+//
+//#if !defined(_MSC_VER)
+//  __attribute__ ((target ("avx512bw")))
+//#endif
+//static inline __m512i popcnt512(__m512i v)
+//{
+//  __m512i m1 = _mm512_set1_epi8(0x55);
+//  __m512i m2 = _mm512_set1_epi8(0x33);
+//  __m512i m4 = _mm512_set1_epi8(0x0F);
+//  __m512i t1 = _mm512_sub_epi8(v, (_mm512_srli_epi16(v, 1) & m1));
+//  __m512i t2 = _mm512_add_epi8(t1 & m2, (_mm512_srli_epi16(t1, 2) & m2));
+//  __m512i t3 = _mm512_add_epi8(t2, _mm512_srli_epi16(t2, 4)) & m4;
+//
+//  return _mm512_sad_epu8(t3, _mm512_setzero_si512());
+//}
+//
+//#if !defined(_MSC_VER)
+//  __attribute__ ((target ("avx512bw")))
+//#endif
+//static inline void CSA512(__m512i* h, __m512i* l, __m512i a, __m512i b, __m512i c)
+//{
+//  *l = _mm512_ternarylogic_epi32(c, b, a, 0x96);
+//  *h = _mm512_ternarylogic_epi32(c, b, a, 0xe8);
+//}
+//
+///*
+// * AVX512 Harley-Seal popcount (4th iteration).
+// * The algorithm is based on the paper "Faster Population Counts
+// * using AVX2 Instructions" by Daniel Lemire, Nathan Kurz and
+// * Wojciech Mula (23 Nov 2016).
+// * @see https://arxiv.org/abs/1611.07612
+// */
+//#if !defined(_MSC_VER)
+//  __attribute__ ((target ("avx512bw")))
+//#endif
+//static inline uint64_t popcnt_avx512(const __m512i* data, const uint64_t size)
+//{
+//  __m512i cnt = _mm512_setzero_si512();
+//  __m512i ones = _mm512_setzero_si512();
+//  __m512i twos = _mm512_setzero_si512();
+//  __m512i fours = _mm512_setzero_si512();
+//  __m512i eights = _mm512_setzero_si512();
+//  __m512i sixteens = _mm512_setzero_si512();
+//  __m512i twosA, twosB, foursA, foursB, eightsA, eightsB;
+//
+//  uint64_t i = 0;
+//  uint64_t limit = size - size % 16;
+//  uint64_t* cnt64;
+//
+//  for(; i < limit; i += 16)
+//  {
+//    CSA512(&twosA, &ones, ones, data[i+0], data[i+1]);
+//    CSA512(&twosB, &ones, ones, data[i+2], data[i+3]);
+//    CSA512(&foursA, &twos, twos, twosA, twosB);
+//    CSA512(&twosA, &ones, ones, data[i+4], data[i+5]);
+//    CSA512(&twosB, &ones, ones, data[i+6], data[i+7]);
+//    CSA512(&foursB, &twos, twos, twosA, twosB);
+//    CSA512(&eightsA, &fours, fours, foursA, foursB);
+//    CSA512(&twosA, &ones, ones, data[i+8], data[i+9]);
+//    CSA512(&twosB, &ones, ones, data[i+10], data[i+11]);
+//    CSA512(&foursA, &twos, twos, twosA, twosB);
+//    CSA512(&twosA, &ones, ones, data[i+12], data[i+13]);
+//    CSA512(&twosB, &ones, ones, data[i+14], data[i+15]);
+//    CSA512(&foursB, &twos, twos, twosA, twosB);
+//    CSA512(&eightsB, &fours, fours, foursA, foursB);
+//    CSA512(&sixteens, &eights, eights, eightsA, eightsB);
+//
+//    cnt = _mm512_add_epi64(cnt, popcnt512(sixteens));
+//  }
+//
+//  cnt = _mm512_slli_epi64(cnt, 4);
+//  cnt = _mm512_add_epi64(cnt, _mm512_slli_epi64(popcnt512(eights), 3));
+//  cnt = _mm512_add_epi64(cnt, _mm512_slli_epi64(popcnt512(fours), 2));
+//  cnt = _mm512_add_epi64(cnt, _mm512_slli_epi64(popcnt512(twos), 1));
+//  cnt = _mm512_add_epi64(cnt, popcnt512(ones));
+//
+//  for(; i < size; i++)
+//    cnt = _mm512_add_epi64(cnt, popcnt512(data[i]));
+//
+//  cnt64 = (uint64_t*) &cnt;
+//
+//  return cnt64[0] +
+//         cnt64[1] +
+//         cnt64[2] +
+//         cnt64[3] +
+//         cnt64[4] +
+//         cnt64[5] +
+//         cnt64[6] +
+//         cnt64[7];
+//}
+//
+///* Align memory to 64 bytes boundary */
+//static inline void align_avx512(const uint8_t** p, uint64_t* size, uint64_t* cnt)
+//{
+//  for (; (uintptr_t) *p % 8; (*p)++)
+//  {
+//    *cnt += popcnt64(**p);
+//    *size -= 1;
+//  }
+//  for (; (uintptr_t) *p % 64; (*p) += 8)
+//  {
+//    *cnt += popcnt64(
+//        *(const uint64_t*) *p);
+//    *size -= 8;
+//  }
+//}
+//
+//#endif
 
 /* x86 CPUs */
 #if defined(X86_OR_X64)
@@ -644,19 +644,19 @@ static inline uint64_t popcnt(const void* data, uint64_t size)
   #endif
 #endif
 
-#if defined(HAVE_AVX512)
-
-  /* AVX512 requires arrays >= 1024 bytes */
-  if ((cpuid & bit_AVX512) &&
-      size >= 1024)
-  {
-    align_avx512(&ptr, &size, &cnt);
-    cnt += popcnt_avx512((const __m512i*) ptr, size / 64);
-    ptr += size - size % 64;
-    size = size % 64;
-  }
-
-#endif
+//#if defined(HAVE_AVX512)
+//
+//  /* AVX512 requires arrays >= 1024 bytes */
+//  if ((cpuid & bit_AVX512) &&
+//      size >= 1024)
+//  {
+//    align_avx512(&ptr, &size, &cnt);
+//    cnt += popcnt_avx512((const __m512i*) ptr, size / 64);
+//    ptr += size - size % 64;
+//    size = size % 64;
+//  }
+//
+//#endif
 
 #if defined(HAVE_AVX2)
 
