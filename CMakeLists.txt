@@ -37,9 +37,9 @@ if(NOT benchmark_POPULATED)
 endif()
 
 if(MSVC)
-  add_compile_options(/W4 /arch:AVX2)
+  add_compile_options(/W4 /arch:AVX2 /Qvec-report:2 -Rpass-analysis=loop-vectorize -mavx2 -march=native)
 else()
-  add_compile_options(-Wall -Wextra -pedantic -mavx2)
+  add_compile_options(-Wall -Wextra -pedantic -mavx2 -Rpass-analysis=loop-vectorize)
 endif()
 
 include_directories ("include" "include/sdsl")

@@ -65,6 +65,68 @@ template <int64_t B_LEAF, int64_t B> uint64_t test_tree()
 	return count;
 }
 
+template <int64_t B_LEAF, int64_t B> uint64_t test_tree_insert()
+{
+	const uint64_t inserts = 5000000000;
+	const uint64_t additional_inserts = 100000000;
+
+	cout << "B: " << B << "\n";
+	cout << "B_LEAF: " << B_LEAF << "\n";
+	cout << "Inserts: " << inserts << "\n";
+	cout << "Additional inserts: " << additional_inserts << "\n";
+
+	uint64_t count = 0;
+
+	succinct_bitvector<packed_vector, B_LEAF, B, 0, b_spsi> tree;
+
+	std::random_device rd;
+
+	std::default_random_engine generator(rd());
+
+	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
+
+	for (uint64_t i = 0; i < inserts / 64; ++i)
+	{
+		tree.push_word(distribution(generator), 64);
+	}
+
+	cout << "Total size in bits: " << tree.bit_size() << "\n";
+
+	vector<uint64_t> messages;
+
+	for (uint64_t i = 0; i < additional_inserts; ++i)
+	{
+		messages.push_back(distribution(generator) % (inserts + 1));
+	}
+
+	/*vector<test_message> messages;
+
+	for (uint64_t i = 0; i < additional_inserts; ++i)
+	{
+		messages.push_back(test_message::insert_message(distribution(generator) % (inserts + 1), i % 2));
+	}*/
+
+	const auto t1 = high_resolution_clock::now();
+
+	for (const auto& message : messages)
+	{
+		tree.insert(message, message % 2);
+	}
+
+	const auto t2 = high_resolution_clock::now();
+
+	count += tree.size();
+
+	const auto duration = duration_cast<microseconds>(t2 - t1).count();
+
+	cout << "Tree depth: " << tree.depth() << "\n";
+	cout << "Size (amount of bits inserted): " << tree.size() << "\n";
+	cout << "Time taken in microseconds: " << duration << "\n";
+	cout << "\n";
+
+	return count;
+}
+
 uint64_t test_packed()
 {
 	uint64_t count = 0;
@@ -341,7 +403,7 @@ int main() {
 		tree.insert(i >> 2, i % 2);
 	}
 
-	count += tree.size();
+	//count += tree.size();
 
 	//for (uint64_t i = 0; i < 8000000000; i += 64) {
 	//	tree.push_word(i, 64);
@@ -377,6 +439,11 @@ int main() {
 	//count += test_tree< 4096, 1024>();
 	//count += test_tree< 4096, 4096>();
 	//count += test_tree< 4096, 8192>();
+	//count += test_tree_insert< 4096, 16>();
+	//count += test_tree_insert< 4096, 256>();
+	//count += test_tree_insert< 4096, 1024>();
+	//count += test_tree_insert< 4096, 4096>();
+	//count += test_tree_insert< 4096, 8192>();
 	//count += test_tree< 4096, 2 * 8192>();
 	//count += test_tree< 4096, 3 * 8192>();
 	//count += test_tree< 4096, 65536>();
