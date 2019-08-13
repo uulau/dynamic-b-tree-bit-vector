@@ -54,7 +54,7 @@ namespace dyn {
 		~packed_vector() = default;
 
 		bool at(uint64_t i) const {
-			assert(i < size_);
+			assert(i < size());
 
 			if (buffer_index <= i) {
 				if (buffer_index == i) return buffer_val;
@@ -280,6 +280,7 @@ namespace dyn {
 			if (buffer_index == 0xFFFFFFFFFFFFFFFF) {
 				buffer_val = x;
 				buffer_index = i;
+				return;
 			}
 			else {
 				auto temp_val = x;
@@ -298,7 +299,7 @@ namespace dyn {
 			}
 
 			//shift right elements starting from number i
-			shift_right(i);
+			shift_right(i, fast_div(i));
 
 			//insert x
 			set<false>(i, x);
@@ -344,7 +345,8 @@ namespace dyn {
 
 		uint64_t size() const
 		{
-			return size_;
+			auto size = buffer_index != 0xFFFFFFFFFFFFFFFF ? size_ + 1 : size_;
+			return size;
 		}
 
 		/*
@@ -353,6 +355,11 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
+			if(buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				insert(buffer_index, buffer_val);
+				buffer_index = 0xFFFFFFFFFFFFFFFF;
+			}
+
 			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
@@ -460,13 +467,36 @@ namespace dyn {
 		//shift right of 1 position elements starting
 		//from the i-th.
 		//assumption: last element does not overflow!
-		void shift_right(uint64_t i) {
-			assert(i < size_);
+		// void shift_right(uint64_t i) {
+		// 	assert(i < size_);
+		// 	//number of integers that fit in a memory word
+		// 	assert(int_per_word_ > 0);
+		// 	assert(size_ + 1 <= fast_mul(words.size()));
+
+		// 	uint64_t current_word = fast_div(i);
+
+		// 	//integer that falls out from the right of current word
+		// 	uint64_t falling_out = 0;
+
+		// 	auto val = fast_mul(current_word);
+		// 	if (val < i) {
+		// 		falling_out = (words[current_word] >> (int_per_word_ - 1) * width_) & uint64_t(1);
+		// 		uint64_t falling_out_idx = std::min(val + (int_per_word_ - 1), size_);
+		// 		for (uint64_t j = falling_out_idx; j > i; --j) {
+		// 			assert(j - 1 < size_);
+		// 			set<false>(j, at(j - 1));
+		// 		}
+
+		// 		current_word++;
+		// 	}
+
+		void shift_right(uint64_t i, uint64_t current_word) {
+			assert(i < size());
 			//number of integers that fit in a memory word
 			assert(int_per_word_ > 0);
 			assert(size_ + 1 <= fast_mul(words.size()));
 
-			uint64_t current_word = fast_div(i);
+			uint64_t index = fast_mod(i);
 
 			//integer that falls out from the right of current word
 			uint64_t falling_out = 0;
@@ -474,12 +504,12 @@ namespace dyn {
 			auto val = fast_mul(current_word);
 			if (val < i) {
 				falling_out = (words[current_word] >> (int_per_word_ - 1) * width_) & uint64_t(1);
-				uint64_t falling_out_idx = std::min(val + (int_per_word_ - 1), size_);
-				for (uint64_t j = falling_out_idx; j > i; --j) {
-					assert(j - 1 < size_);
-					set<false>(j, at(j - 1));
-				}
-
+				uint64_t word = words[current_word];
+				uint64_t one_mask = (uint64_t(1) << index) - 1;
+				uint64_t zero_mask = ~one_mask;
+				uint64_t unchanged = word & one_mask;
+				word <<= 1;
+				words[current_word] = (word & zero_mask) | unchanged;
 				current_word++;
 			}
 
@@ -487,22 +517,43 @@ namespace dyn {
 
 			uint64_t falling_out_temp;
 
-			val = fast_div(size_);
-			for (uint64_t j = current_word; j <= val; ++j) {
+			//val = fast_div(size_);
+			const auto s = words.size();
+			for (uint64_t j = current_word; j < s; ++j) {
 
 				assert(j < words.size());
 
 				falling_out_temp = (words[j] >> (int_per_word_ - 1)) & uint64_t(1);
 
-				words[j] <<= 1;
+				words[j] = (words[j] << 1) | falling_out;
 
-				assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
+				//assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
 
-				set<false>(fast_mul(j), falling_out);
-
+				//set<false>(fast_mul(j), falling_out, j);
 				falling_out = falling_out_temp;
 			}
 		}
+
+		// 	//now for the remaining integers we can work blockwise
+
+		// 	uint64_t falling_out_temp;
+
+		// 	val = fast_div(size_);
+		// 	for (uint64_t j = current_word; j <= val; ++j) {
+
+		// 		assert(j < words.size());
+
+		// 		falling_out_temp = (words[j] >> (int_per_word_ - 1)) & uint64_t(1);
+
+		// 		words[j] <<= 1;
+
+		// 		assert(fast_mul(j) >= size_ || !at(fast_mul(j)));
+
+		// 		set<false>(fast_mul(j), falling_out);
+
+		// 		falling_out = falling_out_temp;
+		// 	}
+		// }
 
 		//shift left of 1 position elements starting
 		//from the (i + 1)-st.
