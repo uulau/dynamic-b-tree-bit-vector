@@ -1611,7 +1611,9 @@ namespace dyn {
 					index += 2;
 				}
 
-				while (index < nr_children) {
+				auto const nr_children_c = nr_children;
+
+				while (index < nr_children_c) {
 					++subtree_sizes[index];
 					subtree_psums[index] += val;
 					++index;
@@ -1677,30 +1679,6 @@ namespace dyn {
 
 				// i-th element is in the j-th children
 				uint64_t insert_pos = i - previous_size;
-
-				uint32_t index = j;
-
-				//while (nr_children - index > 1) {
-				//	auto one_mask = _mm_set_epi64x(uint64_t(1), uint64_t(1));
-				//	auto val_mask = _mm_set_epi64x(val, val);
-
-				//	auto sum_vec = _mm_loadu_si128((__m128i*) & subtree_psums[index]);
-				//	auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
-
-				//	auto sum_val_vec = _mm_add_epi64(sum_vec, val_mask);
-				//	auto size_val_vec = _mm_add_epi64(size_vec, one_mask);
-
-				//	_mm_store_si128(&sum_vec, sum_val_vec);
-				//	_mm_store_si128(&size_vec, sum_val_vec);
-
-				//	index += 2;
-				//}
-
-				//while (index < nr_children) {
-				//	++subtree_sizes[index];
-				//	subtree_psums[index] += val;
-				//	++index;
-				//}
 
 				if (not has_leaves()) {
 					assert(not is_full());
@@ -1915,8 +1893,24 @@ namespace dyn {
 
 				//return nr_children - val;
 
-				auto begin = subtree_sizes.begin();
-				return upper_bound(begin, begin + nr_children - 1, i) - begin;
+				uint32_t size = nr_children;
+				uint32_t low = 0;
+
+				while (size > 0) {
+					uint32_t half = size / 2;
+					uint32_t other_half = size - half;
+					uint32_t probe = low + half;
+					uint32_t other_low = low + other_half;
+					uint64_t v = subtree_sizes[probe];
+					size = half;
+					low = v > i ? low : other_low;
+				}
+
+				return low;
+
+
+				//auto begin = subtree_sizes.begin();
+				//return upper_bound(begin, begin + nr_children - 1, i) - begin;
 
 				//uint64_t j = 0;
 				//while (subtree_sizes[j] <= i) {

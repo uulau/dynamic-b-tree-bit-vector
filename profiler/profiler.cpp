@@ -399,9 +399,9 @@ int main() {
 
 	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
 
-	for (uint64_t i = 0; i < 800000000; ++i) {
-		tree.insert(i >> 2, i % 2);
-	}
+	//for (uint64_t i = 0; i < 800000000; ++i) {
+	//	tree.insert(i >> 2, i % 2);
+	//}
 
 	//count += tree.size();
 
@@ -434,11 +434,12 @@ int main() {
 	//count += test_packed();
 	//count += test_sdsl_array();
 	//count += test_array();
-	//count += test_tree< 4096, 16>();
-	//count += test_tree< 4096, 256>();
-	//count += test_tree< 4096, 1024>();
-	//count += test_tree< 4096, 4096>();
-	//count += test_tree< 4096, 8192>();
+	count += test_tree< 4096, 16>();
+	count += test_tree< 4096, 128>();
+	count += test_tree< 4096, 256>();
+	count += test_tree< 4096, 1024>();
+	count += test_tree< 4096, 4096>();
+	count += test_tree< 4096, 8192>();
 	//count += test_tree_insert< 4096, 16>();
 	//count += test_tree_insert< 4096, 256>();
 	//count += test_tree_insert< 4096, 1024>();

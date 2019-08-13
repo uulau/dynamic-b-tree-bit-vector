@@ -9,7 +9,9 @@
 #include "util.hpp"
 #include "rank_support_v5.hpp"
 
-inline uint64_t find_child1(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+const auto data_size = 100000;
+
+inline uint32_t find_child1(const std::vector<uint32_t>& subtree_sizes, uint32_t i)
 {
 	int j = 0;
 
@@ -24,15 +26,15 @@ inline uint64_t find_child1(const std::vector<uint64_t>& subtree_sizes, uint64_t
 	}
 }
 
-inline uint64_t find_child2(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+inline uint32_t find_child2(const std::vector<uint32_t>& subtree_sizes, uint32_t i)
 {
 	auto begin = subtree_sizes.begin();
 	return std::upper_bound(begin, begin + subtree_sizes.size() - 1, i) - begin;
 }
 
-inline uint64_t find_child3(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+inline uint32_t find_child3(const std::vector<uint32_t>& subtree_sizes, uint32_t i)
 {
-	uint64_t j = 0;
+	uint32_t j = 0;
 	while (subtree_sizes[j] <= i) {
 		j++;
 		assert(j < subtree_sizes.size());
@@ -42,73 +44,44 @@ inline uint64_t find_child3(const std::vector<uint64_t>& subtree_sizes, uint64_t
 
 inline uint64_t find_child4(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
 {
-	uint64_t index = 0;
-	uint64_t result[2];
-	auto val_mask = _mm_set_epi64x(i, i);
-	while (subtree_sizes.size() - index > 1) {
-		auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
-		auto result_vec = _mm_cmpgt_epi64(size_vec, val_mask);
-		_mm_storeu_si128((__m128i*) & result, result_vec);
-		if (result[0] == 0xFFFFFFFFFFFFFFFF) return index;
-		if (result[1] == 0xFFFFFFFFFFFFFFFF) return index + 1;
-		index += 2;
+	uint32_t size = subtree_sizes.size();
+	uint32_t low = 0;
+
+	while (size > 0) {
+		uint32_t half = size / 2;
+		uint32_t other_half = size - half;
+		uint32_t probe = low + half;
+		uint32_t other_low = low + other_half;
+		uint64_t v = subtree_sizes[probe];
+		size = half;
+		low = v >= i ? low : other_low;
 	}
 
-	while (index < subtree_sizes.size() && subtree_sizes[index] <= i) {
-		index++;
-		assert(index < subtree_sizes.size());
-	}
-	return index;
+	return low;
 }
 
-inline uint64_t find_child5(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
+inline uint32_t find_child6(const std::vector<uint32_t>& subtree_sizes, uint32_t i)
 {
-	uint64_t index = 0;
-	auto counter = _mm_setzero_si128();
-	auto val_mask = _mm_set1_epi64x(i);
-
-	while (subtree_sizes.size() - index > 1) {
-		auto size_vec = _mm_loadu_si128((__m128i*) & subtree_sizes[index]);
-		auto result_vec = _mm_cmpgt_epi64(size_vec, val_mask);
-		counter = _mm_sub_epi64(counter, result_vec);
-		index += 2;
-	}
-
-	auto shuffle = _mm_shuffle_epi32(counter, _MM_SHUFFLE(1, 0, 3, 2));
-
-	counter = _mm_add_epi64(counter, shuffle);
-
-	auto val = _mm_cvtsi128_si64(counter);
-
-	if (!index || index < subtree_sizes.size()) {
-		if (i < subtree_sizes[index]) {
-			++val;
-			assert(index < subtree_sizes.size());
-		}
-	}
-
-	return subtree_sizes.size() - val;
-}
-
-inline uint64_t find_child6(const std::vector<uint64_t>& subtree_sizes, uint64_t i)
-{
-	uint64_t index = 0;
+	uint32_t index = 0;
 	auto counter = _mm256_setzero_si256();
-	auto val_mask = _mm256_set1_epi64x(i);
+	auto val_mask = _mm256_set1_epi32(i);
 
-	while (subtree_sizes.size() - index > 3) {
+	while (subtree_sizes.size() - index > 7) {
 		auto size_vec = _mm256_loadu_si256((__m256i*) & subtree_sizes[index]);
-		auto result_vec = _mm256_cmpgt_epi64(size_vec, val_mask);
-		counter = _mm256_sub_epi64(counter, result_vec);
-		index += 4;
+		auto result_vec = _mm256_cmpgt_epi32(size_vec, val_mask);
+		counter = _mm256_sub_epi32(counter, result_vec);
+		index += 8;
 	}
 
 	auto high = _mm256_extractf128_si256(counter, 1);
 	auto low = _mm256_extractf128_si256(counter, 0);
-	auto result = _mm_add_epi64(high, low);
+	auto result = _mm_add_epi32(high, low);
+
 	auto shuffle = _mm_shuffle_epi32(result, _MM_SHUFFLE(1, 0, 3, 2));
-	result = _mm_add_epi64(result, shuffle);
-	auto val = _mm_cvtsi128_si64(result);
+	result = _mm_add_epi32(result, shuffle);
+	auto shuffle2 = _mm_shuffle_epi32(result, _MM_SHUFFLE(2, 3, 0, 1));
+
+	auto val = _mm_cvtsi128_si32(result);
 
 	while (!index || (index < subtree_sizes.size() && subtree_sizes[index] > i)) {
 		++index;
@@ -119,7 +92,7 @@ inline uint64_t find_child6(const std::vector<uint64_t>& subtree_sizes, uint64_t
 }
 
 static void UnrolledLinear(benchmark::State& state) {
-	std::vector<uint64_t> vals;
+	std::vector<uint32_t> vals;
 
 	for (int i = 0; i < 128; ++i) {
 		vals.push_back(i + 1);
@@ -133,8 +106,23 @@ static void UnrolledLinear(benchmark::State& state) {
 }
 BENCHMARK(UnrolledLinear);
 
-static void UpperBound(benchmark::State& state) {
+static void CoolBinary(benchmark::State& state) {
 	std::vector<uint64_t> vals;
+
+	for (int i = 0; i < 128; ++i) {
+		vals.push_back(i + 1);
+	}
+
+	for (auto _ : state) {
+		for (int i = 0; i < 128; ++i) {
+			benchmark::DoNotOptimize(find_child4(vals, i));
+		}
+	}
+}
+BENCHMARK(CoolBinary);
+
+static void UpperBound(benchmark::State& state) {
+	std::vector<uint32_t> vals;
 
 	for (int i = 0; i < 128; ++i) {
 		vals.push_back(i + 1);
@@ -149,7 +137,7 @@ static void UpperBound(benchmark::State& state) {
 BENCHMARK(UpperBound);
 
 static void Linear(benchmark::State& state) {
-	std::vector<uint64_t> vals;
+	std::vector<uint32_t> vals;
 
 	for (int i = 0; i < 128; ++i) {
 		vals.push_back(i + 1);
@@ -163,39 +151,8 @@ static void Linear(benchmark::State& state) {
 }
 BENCHMARK(Linear);
 
-
-static void SIMDLinear(benchmark::State& state) {
-	std::vector<uint64_t> vals;
-
-	for (int i = 0; i < 128; ++i) {
-		vals.push_back(i + 1);
-	}
-
-	for (auto _ : state) {
-		for (int i = 0; i < 128; ++i) {
-			benchmark::DoNotOptimize(find_child4(vals, i));
-		}
-	}
-}
-BENCHMARK(SIMDLinear);
-
-static void SIMDLinearCount(benchmark::State& state) {
-	std::vector<uint64_t> vals;
-
-	for (int i = 0; i < 128; ++i) {
-		vals.push_back(i + 1);
-	}
-
-	for (auto _ : state) {
-		for (int i = 0; i < 128; ++i) {
-			benchmark::DoNotOptimize(find_child5(vals, i));
-		}
-	}
-}
-BENCHMARK(SIMDLinearCount);
-
 static void AVX2(benchmark::State& state) {
-	std::vector<uint64_t> vals;
+	std::vector<uint32_t> vals;
 
 	for (int i = 0; i < 128; ++i) {
 		vals.push_back(i + 1);

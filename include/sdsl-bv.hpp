@@ -24,9 +24,9 @@ namespace dyn {
 		uint64_t message_count
 	>
 		class sdsl_bv {
-		static_assert(bucket_width > 2);
-		static_assert((bucket_width& (bucket_width - 1)) == 0);
-		static_assert(message_count > 0);
+		static_assert(bucket_width > 2, "Buckets must have at least three items.");
+		static_assert((bucket_width& (bucket_width - 1)) == 0, "Bucket width must be a power of two.");
+		static_assert(message_count > 0, "Message count must be at least zero.");
 
 		public:
 			explicit sdsl_bv() {
