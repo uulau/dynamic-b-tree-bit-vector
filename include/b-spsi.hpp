@@ -1596,6 +1596,8 @@ namespace dyn {
 
 				uint32_t index = j;
 
+				auto const nr_children_c = nr_children;
+
 				while (nr_children - index > 1) {
 					auto one_mask = _mm_set_epi64x(uint64_t(1), uint64_t(1));
 					auto val_mask = _mm_set_epi64x(val, val);
@@ -1606,13 +1608,11 @@ namespace dyn {
 					auto sum_val_vec = _mm_add_epi64(sum_vec, val_mask);
 					auto size_val_vec = _mm_add_epi64(size_vec, one_mask);
 
-					_mm_store_si128(&sum_vec, sum_val_vec);
-					_mm_store_si128(&size_vec, size_val_vec);
+					_mm_storeu_si128((__m128i*) & subtree_psums[index], sum_val_vec);
+					_mm_storeu_si128((__m128i*) & subtree_sizes[index], size_val_vec);
 
 					index += 2;
 				}
-
-				auto const nr_children_c = nr_children;
 
 				while (index < nr_children_c) {
 					++subtree_sizes[index];

@@ -401,6 +401,9 @@ int main() {
 
 	//for (uint64_t i = 0; i < 800000000; ++i) {
 	//	tree.insert(i >> 2, i % 2);
+	//	if (tree.size() != (i + 1)) {
+	//		__debugbreak();
+	//	}
 	//}
 
 	//count += tree.size();
