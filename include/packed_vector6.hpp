@@ -348,10 +348,11 @@ namespace dyn {
 			auto const words_s = words.size();
 			uint64_t falling_out_temp1;
 			uint64_t falling_out_temp2;
-			for (auto i = std::min(first_word, second_word); i < words_s; ++i) {
-				// These are handled
-				if (i == first_word) continue;
-				if (i == second_word) continue;
+			auto lesser = std::min(first_word, second_word);
+			auto greater = std::max(first_word, second_word);
+			for (auto i = lesser; i < words_s; ++i) {
+				// This is handled
+				if (i == first_word && first_word == second_word) continue;
 
 				auto first_bypass = first_word < i;
 				auto second_bypass = second_word < i;
