@@ -376,20 +376,20 @@ uint64_t packed_vector_test() {
 		v.insert(v.size(), val);
 
 		if (v.size() != i + 1) {
-			throw;
+			__debugbreak();
 		}
 
-		if (v.psum(i) != ranks) {
-			throw;
-		}
+		//if (v.psum(i) != ranks) {
+		//	throw;
+		//}
 
 		if (v.at(i) != val) {
-			throw;
+			__debugbreak();
 		}
 
-		if (vals != v.psum()) {
-			throw;
-		}
+		//if (vals != v.psum()) {
+		//	throw;
+		//}
 	}
 	return vals;
 }
@@ -397,7 +397,7 @@ uint64_t packed_vector_test() {
 int main() {
 	uint64_t count = 0;
 
-	succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
+	//succinct_bitvector<packed_vector, 4096, 256, 0, b_spsi> tree;
 
 	//for (uint64_t i = 0; i < 800000000; ++i) {
 	//	tree.insert(i >> 2, i % 2);

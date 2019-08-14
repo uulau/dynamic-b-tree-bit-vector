@@ -483,6 +483,7 @@ namespace dyn {
 					assert(j < leaves.size());
 					assert(j < nr_children);
 					assert(leaves[j] != NULL);
+					auto size = leaves[j]->size();
 					assert(i - previous_size < leaves[j]->size());
 
 					return leaves[j]->at(i - previous_size);
