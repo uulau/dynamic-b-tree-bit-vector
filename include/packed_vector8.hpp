@@ -56,21 +56,29 @@ namespace dyn {
 		bool at(uint64_t i) const {
 			assert(i < size());
 
-			if (buffer_index <= i) {
-				if (buffer_index == i) {
+			auto i_c = i;
+
+			if (buffer_index <= i_c) {
+				if (buffer_index == i_c) {
 					return buffer_val;
 				}
 				else {
-					++i;
+					++i_c;
 				}
 			}
 
-			if (buffer2_index <= i) {
-				if (buffer2_index == i) {
+			if (buffer2_index <= i_c) {
+				if (buffer2_index == i_c) {
 					return buffer2_val;
 				}
 				else {
-					++i;
+					++i_c;
+				}
+			}
+
+			if (buffer3_index <= i_c) {
+				if (buffer3_index == i_c) {
+					return buffer3_val;
 				}
 			}
 
@@ -285,41 +293,51 @@ namespace dyn {
 		}
 
 		void insert(uint64_t i, uint64_t x) {
-			// First empty
 			if (buffer_index == 0xFFFFFFFFFFFFFFFF) {
 				buffer_index = i;
 				buffer_val = x;
 			}
-			// First filled, second empty
-			else if (buffer_index != 0xFFFFFFFFFFFFFFFF && buffer2_index == 0xFFFFFFFFFFFFFFFF) {
+			else if (buffer2_index == 0xFFFFFFFFFFFFFFFF) {
 				buffer2_index = buffer_index;
 				buffer2_val = buffer_val;
-				buffer_index = i;
 				buffer_val = x;
+				buffer_index = i;
 			}
-			// Both full
+			else if (buffer3_index == 0xFFFFFFFFFFFFFFFF) {
+				buffer3_index = buffer2_index;
+				buffer3_val = buffer2_val;
+				buffer2_index = buffer_index;
+				buffer2_val = buffer_val;
+				buffer_val = x;
+				buffer_index = i;
+			}
 			else {
 				insert_proper();
-				buffer_index = i;
 				buffer_val = x;
+				buffer_index = i;
 				buffer2_index = 0xFFFFFFFFFFFFFFFF;
+				buffer3_index = 0xFFFFFFFFFFFFFFFF;
 			}
 		}
 
 		void insert_proper() {
-			if (size_ + 2 > fast_mul(words.size())) {
+			if (size_ + 3 > fast_mul(words.size())) {
 				words.reserve(words.size() + extra_);
 				words.resize(words.size() + extra_, 0);
 			}
 
 			auto first_word = fast_div(buffer_index);
 			auto second_word = fast_div(buffer2_index);
+			auto third_word = fast_div(buffer3_index);
+
 			auto first_index = fast_mod(buffer_index);
 			auto second_index = fast_mod(buffer2_index);
+			auto third_index = fast_mod(buffer3_index);
+
 			auto first_word_start_index = fast_mul(first_word);
 			auto second_word_start_index = fast_mul(second_word);
+			auto third_word_start_index = fast_mul(third_word);
 
-			// Apply first insertion, store number falling out
 			//if (first_word_start_index < buffer_index) {
 			auto first_falling_out = (words[first_word] >> 63) & uint64_t(1);
 			uint64_t word = words[first_word];
@@ -330,7 +348,6 @@ namespace dyn {
 			words[first_word] = (word & zero_mask) | unchanged;
 			//}
 
-			// Apply second insertion, store number falling out
 			//if (second_word_start_index < buffer2_index) {
 			auto second_falling_out = (words[second_word] >> 63) & uint64_t(1);
 			word = words[second_word];
@@ -341,18 +358,41 @@ namespace dyn {
 			words[second_word] = (word & zero_mask) | unchanged;
 			//}
 
-			// Store to const for compiler auto-vectorization (definetely, maybe)
-			auto const words_s = words.size();
+			//if (third_word_start_index < buffer3_index) {
+			auto third_falling_out = (words[third_word] >> 63) & uint64_t(1);
+			word = words[third_word];
+			one_mask = (uint64_t(1) << third_index) - 1;
+			zero_mask = ~one_mask;
+			unchanged = word & one_mask;
+			word <<= 1;
+			words[third_word] = (word & zero_mask) | unchanged;
+			//}
+
 			uint64_t falling_out_temp1;
 			uint64_t falling_out_temp2;
-			auto lesser = std::min(first_word, second_word);
-			auto greater = std::max(first_word, second_word);
-			for (auto i = lesser; i < words_s; ++i) {
+			uint64_t falling_out_temp3;
+
+			auto lesser = std::min({ first_word, second_word, third_word });
+
+			auto const words_s = words.size();
+
+			for (auto i = lesser + 1; i < words_s; ++i) {
 				auto first_bypass = first_word < i;
 				auto second_bypass = second_word < i;
+				auto third_bypass = third_word < i;
 
-				// Passed both
-				if (first_bypass && second_bypass) {
+				if (first_bypass && second_bypass && third_bypass) {
+					falling_out_temp1 = (words[i] >> 63) & uint64_t(1);
+					falling_out_temp2 = (words[i] >> 62) & uint64_t(1);
+					falling_out_temp3 = (words[i] >> 61) & uint64_t(1);
+
+					words[i] = (words[i] << 3) | (first_falling_out << 2) | (second_falling_out << 1) | third_falling_out;
+
+					first_falling_out = falling_out_temp1;
+					second_falling_out = falling_out_temp2;
+					third_falling_out = falling_out_temp3;
+				}
+				else if (first_bypass && second_bypass && !third_bypass) {
 					falling_out_temp1 = (words[i] >> 63) & uint64_t(1);
 					falling_out_temp2 = (words[i] >> 62) & uint64_t(1);
 
@@ -361,29 +401,51 @@ namespace dyn {
 					first_falling_out = falling_out_temp1;
 					second_falling_out = falling_out_temp2;
 				}
-				// Passed first
-				else if (first_bypass) {
+				else if (first_bypass && !second_bypass && third_bypass) {
+					falling_out_temp1 = (words[i] >> 63) & uint64_t(1);
+					falling_out_temp3 = (words[i] >> 62) & uint64_t(1);
+
+					words[i] = (words[i] << 2) | (first_falling_out << 1) | third_bypass;
+
+					first_falling_out = falling_out_temp1;
+					third_falling_out = falling_out_temp3;
+				}
+				else if (first_bypass && !second_bypass && !third_bypass) {
 					falling_out_temp1 = (words[i] >> 63) & uint64_t(1);
 
 					words[i] = (words[i] << 1) | first_falling_out;
 
 					first_falling_out = falling_out_temp1;
 				}
-				// Passed second
-				else if (second_bypass) {
-					falling_out_temp1 = (words[i] >> 63) & uint64_t(1);
+				else if (!first_bypass && second_bypass && third_bypass) {
+					falling_out_temp2 = (words[i] >> 63) & uint64_t(1);
+					falling_out_temp3 = (words[i] >> 62) & uint64_t(1);
+
+					words[i] = (words[i] << 2) | (second_falling_out << 1) | third_falling_out;
+
+					second_falling_out = falling_out_temp2;
+					third_falling_out = falling_out_temp3;
+				}
+				else if (!first_bypass && second_bypass && !third_bypass) {
+					falling_out_temp2 = (words[i] >> 63) & uint64_t(1);
 
 					words[i] = (words[i] << 1) | second_falling_out;
 
-					second_falling_out = falling_out_temp1;
+					second_falling_out = falling_out_temp2;
 				}
-				// Must've passed at least one
-			}
+				else if (!first_bypass && !second_bypass && third_bypass) {
+					falling_out_temp3 = (words[i] >> 63) & uint64_t(1);
 
+					words[i] = (words[i] << 1) | third_falling_out;
+
+					third_falling_out = falling_out_temp3;
+				}
+			}
 			set<false>(buffer_index, buffer_val);
 			set<false>(buffer2_index, buffer2_val);
-			psum_ += buffer_val + buffer2_val;
-			size_ += 2;
+			set<false>(buffer3_index, buffer3_val);
+			psum_ += buffer_val + buffer2_val + buffer3_val;
+			size_ += 3;
 		}
 
 		/*
@@ -421,6 +483,7 @@ namespace dyn {
 			auto size = size_;
 			if (buffer_index != 0xFFFFFFFFFFFFFFFF) ++size;
 			if (buffer2_index != 0xFFFFFFFFFFFFFFFF) ++size;
+			if (buffer3_index != 0xFFFFFFFFFFFFFFFF) ++size;
 			return size;
 		}
 
@@ -660,6 +723,8 @@ namespace dyn {
 		bool buffer_val;
 		uint64_t buffer2_index = 0xFFFFFFFFFFFFFFFF;
 		bool buffer2_val;
+		uint64_t buffer3_index = 0xFFFFFFFFFFFFFFFF;
+		bool buffer3_val;
 	};
 
 }
