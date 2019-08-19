@@ -56,33 +56,59 @@ namespace dyn {
 		bool at(uint64_t i) const {
 			assert(i < size());
 
-			auto i_c = i;
+			auto index = i;
 
-			if (buffer_index <= i_c) {
-				if (buffer_index == i_c) {
-					return buffer_val;
+			if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
+				auto i3 = buffer3_index;
+				auto i2 = buffer2_index;
+
+				if (i2 <= i3) {
+					++i3;
 				}
-				else {
-					++i_c;
+
+				if (buffer_index <= i3) {
+					++i3;
+				}
+
+				if (i3 <= i) {
+					if (i3 == i) {
+						return buffer3_val;
+					}
+					else {
+						++index;
+					}
 				}
 			}
 
-			if (buffer2_index <= i_c) {
-				if (buffer2_index == i_c) {
-					return buffer2_val;
+			if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+				auto i2 = buffer2_index;
+
+				if (buffer_index <= i2) {
+					++i2;
 				}
-				else {
-					++i_c;
+
+				if (i2 <= i) {
+					if (i2 == i) {
+						return buffer2_val;
+					}
+					else {
+						++index;
+					}
 				}
 			}
 
-			if (buffer3_index <= i_c) {
-				if (buffer3_index == i_c) {
-					return buffer3_val;
+			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				if (buffer_index <= i) {
+					if (buffer_index == i) {
+						return buffer_val;
+					}
+					else {
+						++index;
+					}
 				}
 			}
 
-			return MASK & (words[fast_div(i)] >> fast_mod(i));
+			return MASK & (words[fast_div(index)] >> fast_mod(index));
 		}
 
 		uint64_t psum() const {
@@ -104,31 +130,37 @@ namespace dyn {
 			auto i2 = buffer2_index;
 			auto i3 = buffer3_index;
 
-			if (i2 <= i1) {
-				++i1;
+			if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
+				if (i3 <= i1) {
+					++i1;
+				}
+
+				if (i3 <= i2) {
+					++i2;
+				}
+
+				if (i3 < i) {
+					--index;
+					add_val += buffer3_val;
+				}
 			}
 
-			if (i3 <= i1) {
-				++i1;
+			if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+				if (i2 <= i1) {
+					++i1;
+				}
+
+				if (i2 < i) {
+					--index;
+					add_val += buffer2_val;
+				}
 			}
 
-			if (i3 <= i2) {
-				++i2;
-			}
-
-			if (i1 < i) {
-				--index;
-				add_val += buffer_val;
-			}
-
-			if (i2 < i) {
-				--index;
-				add_val += buffer2_val;
-			}
-
-			if (i3 < i) {
-				--index;
-				add_val += buffer3_val;
+			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				if (i1 < i) {
+					--index;
+					add_val += buffer_val;
+				}
 			}
 
 			uint64_t s = 0;
@@ -523,6 +555,11 @@ namespace dyn {
 		 */
 		packed_vector* split() {
 			insert_proper();
+
+			buffer_index = 0xFFFFFFFFFFFFFFFF;
+			buffer2_index = 0xFFFFFFFFFFFFFFFF;
+			buffer3_index = 0xFFFFFFFFFFFFFFFF;
+
 			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
