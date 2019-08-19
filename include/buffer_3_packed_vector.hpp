@@ -58,46 +58,43 @@ namespace dyn {
 
 			auto index = i;
 
-			if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
-				auto i3 = buffer3_index;
-				auto i2 = buffer2_index;
-
-				if (i2 <= i3) {
-					++i3;
-				}
-
-				if (buffer_index <= i3) {
-					++i3;
-				}
-
-				if (i3 <= i) {
-					if (i3 == i) {
-						return buffer3_val;
-					}
-					else {
-						++index;
-					}
-				}
-			}
-
-			if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
-				auto i2 = buffer2_index;
-
-				if (buffer_index <= i2) {
-					++i2;
-				}
-
-				if (i2 <= i) {
-					if (i2 == i) {
-						return buffer2_val;
-					}
-					else {
-						++index;
-					}
-				}
-			}
-
 			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+					if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
+						auto i3 = buffer3_index;
+
+						if (buffer2_index <= i3) {
+							++i3;
+						}
+
+						if (buffer_index <= i3) {
+							++i3;
+						}
+
+						if (i3 <= i) {
+							if (i3 == i) {
+								return buffer3_val;
+							}
+							else {
+								++index;
+							}
+						}
+					}
+					auto i2 = buffer2_index;
+
+					if (buffer_index <= i2) {
+						++i2;
+					}
+
+					if (i2 <= i) {
+						if (i2 == i) {
+							return buffer2_val;
+						}
+						else {
+							++index;
+						}
+					}
+				}
 				if (buffer_index <= i) {
 					if (buffer_index == i) {
 						return buffer_val;
@@ -126,40 +123,41 @@ namespace dyn {
 
 			uint64_t add_val = 0;
 			auto index = i;
-			auto i1 = buffer_index;
-			auto i2 = buffer2_index;
-			auto i3 = buffer3_index;
-
-			if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
-				if (i3 <= i1) {
-					++i1;
-				}
-
-				if (i3 <= i2) {
-					++i2;
-				}
-
-				if (i3 < i) {
-					--index;
-					add_val += buffer3_val;
-				}
-			}
-
-			if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
-				if (i2 <= i1) {
-					++i1;
-				}
-
-				if (i2 < i) {
-					--index;
-					add_val += buffer2_val;
-				}
-			}
 
 			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
-				if (i1 < i) {
-					--index;
-					add_val += buffer_val;
+				if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+					if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
+						auto i3 = buffer3_index;
+
+						if (buffer2_index <= i3) {
+							++i3;
+						}
+
+						if (buffer_index <= i3) {
+							++i3;
+						}
+
+						if (i3 < i) {
+							add_val += buffer3_val;
+							--index;
+						}
+					}
+					auto i2 = buffer2_index;
+
+					if (buffer_index <= i2) {
+						++i2;
+					}
+
+					if (i2 < i) {
+						add_val += buffer2_val;
+						--index;
+					}
+				}
+				if (buffer_index <= i) {
+					if (buffer_index < i) {
+						add_val += buffer_val;
+						--index;
+					}
 				}
 			}
 

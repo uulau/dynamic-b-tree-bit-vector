@@ -56,38 +56,76 @@ namespace dyn {
 		bool at(uint64_t i) const {
 			assert(i < size());
 
-			auto i_c = i;
+			auto index = i;
 
-			if (buffer_index <= i_c) {
-				if (buffer_index == i_c) {
-					return buffer_val;
-				}
-				else {
-					++i_c;
-				}
-			}
+			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+					if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
+						if (buffer4_index != 0xFFFFFFFFFFFFFFFF) {
+							auto i4 = buffer4_index;
 
-			if (buffer2_index <= i_c) {
-				if (buffer2_index == i_c) {
-					return buffer2_val;
-				}
-				else {
-					++i_c;
-				}
-			}
+							if (buffer3_index <= i4) {
+								++i4;
+							}
 
-			if (buffer3_index <= i_c) {
-				if (buffer3_index == i_c) {
-					return buffer3_val;
-				}
-				else {
-					++i_c;
-				}
-			}
+							if (buffer2_index <= i4) {
+								++i4;
+							}
 
-			if (buffer4_index <= i_c) {
-				if (buffer4_index == i_c) {
-					return buffer4_val;
+							if (buffer_index <= i4) {
+								++i4;
+							}
+
+							if (i4 <= i) {
+								if (i4 == i) {
+									return buffer4_val;
+								}
+								else {
+									++index;
+								}
+							}
+						}
+						auto i3 = buffer3_index;
+
+						if (buffer2_index <= i3) {
+							++i3;
+						}
+
+						if (buffer_index <= i3) {
+							++i3;
+						}
+
+						if (i3 <= i) {
+							if (i3 == i) {
+								return buffer3_val;
+							}
+							else {
+								++index;
+							}
+						}
+					}
+					auto i2 = buffer2_index;
+
+					if (buffer_index <= i2) {
+						++i2;
+					}
+
+					if (i2 <= i) {
+						if (i2 == i) {
+							return buffer2_val;
+						}
+						else {
+							++index;
+						}
+					}
+				}
+				if (buffer_index <= i) {
+					if (buffer_index == i) {
+						return buffer_val;
+					}
+					else {
+						++index;
+					}
 				}
 			}
 
@@ -105,27 +143,83 @@ namespace dyn {
 
 			assert(i < size_);
 
-			bool include_buffer = buffer_index <= i + 1;
+			++i;
 
-			if (!include_buffer) {
-				i++;
+			uint64_t add_val = 0;
+			auto index = i;
+
+			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+					if (buffer3_index != 0xFFFFFFFFFFFFFFFF) {
+						if (buffer4_index != 0xFFFFFFFFFFFFFFFF) {
+							auto i4 = buffer4_index;
+
+							if (buffer3_index <= i4) {
+								++i4;
+							}
+
+							if (buffer2_index <= i4) {
+								++i4;
+							}
+
+							if (buffer_index <= i4) {
+								++i4;
+							}
+
+							if (i4 < i) {
+								add_val += buffer4_val;
+								--index;
+							}
+						}
+						auto i3 = buffer3_index;
+
+						if (buffer2_index <= i3) {
+							++i3;
+						}
+
+						if (buffer_index <= i3) {
+							++i3;
+						}
+
+						if (i3 < i) {
+							add_val += buffer3_val;
+							--index;
+						}
+					}
+					auto i2 = buffer2_index;
+
+					if (buffer_index <= i2) {
+						++i2;
+					}
+
+					if (i2 < i) {
+						add_val += buffer2_val;
+						--index;
+					}
+				}
+				if (buffer_index <= i) {
+					if (buffer_index < i) {
+						add_val += buffer_val;
+						--index;
+					}
+				}
 			}
 
 			uint64_t s = 0;
 			uint64_t pos = 0;
 
-			auto const max = fast_div(i);
+			auto const max = fast_div(index);
 			for (uint64_t j = 0; j < max; ++j) {
 				s += __builtin_popcountll(words[j]);
 				pos += 64;
 			}
 
-			auto const mod = fast_mod(i);
+			auto const mod = fast_mod(index);
 			if (mod) {
 				s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
 			}
 
-			return include_buffer ? s + buffer_val : s;
+			return s + add_val;
 		}
 
 		/*
@@ -610,6 +704,13 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
+			insert_proper();
+
+			buffer_index = 0xFFFFFFFFFFFFFFFF;
+			buffer2_index = 0xFFFFFFFFFFFFFFFF;
+			buffer3_index = 0xFFFFFFFFFFFFFFFF;
+			buffer4_index = 0xFFFFFFFFFFFFFFFF;
+
 			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());
