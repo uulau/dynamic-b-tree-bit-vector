@@ -96,27 +96,56 @@ namespace dyn {
 
 			assert(i < size_);
 
-			bool include_buffer = buffer_index <= i + 1;
+			++i;
 
-			if (!include_buffer) {
-				i++;
+			uint64_t add_val = 0;
+			auto index = i;
+			auto i1 = buffer_index;
+			auto i2 = buffer2_index;
+			auto i3 = buffer3_index;
+
+			if (i2 <= i1) {
+				++i1;
+			}
+
+			if (i3 <= i1) {
+				++i1;
+			}
+
+			if (i3 <= i2) {
+				++i2;
+			}
+
+			if (i1 < i) {
+				--index;
+				add_val += buffer_val;
+			}
+
+			if (i2 < i) {
+				--index;
+				add_val += buffer2_val;
+			}
+
+			if (i3 < i) {
+				--index;
+				add_val += buffer3_val;
 			}
 
 			uint64_t s = 0;
 			uint64_t pos = 0;
 
-			auto const max = fast_div(i);
+			auto const max = fast_div(index);
 			for (uint64_t j = 0; j < max; ++j) {
 				s += __builtin_popcountll(words[j]);
 				pos += 64;
 			}
 
-			auto const mod = fast_mod(i);
+			auto const mod = fast_mod(index);
 			if (mod) {
 				s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
 			}
 
-			return include_buffer ? s + buffer_val : s;
+			return s + add_val;
 		}
 
 		/*
@@ -493,6 +522,7 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
+			insert_proper();
 			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());

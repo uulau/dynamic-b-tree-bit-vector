@@ -56,25 +56,37 @@ namespace dyn {
 		bool at(uint64_t i) const {
 			assert(i < size());
 
-			if (buffer_index <= i) {
-				if (buffer_index == i) {
-					return buffer_val;
+			auto index = i;
+
+			if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+				auto i2 = buffer2_index;
+
+				if (buffer_index <= i2) {
+					++i2;
 				}
-				else {
-					++i;
+
+				if (i2 <= i) {
+					if (i2 == i) {
+						return buffer2_val;
+					}
+					else {
+						++index;
+					}
 				}
 			}
 
-			if (buffer2_index <= i) {
-				if (buffer2_index == i) {
-					return buffer2_val;
-				}
-				else {
-					++i;
+			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				if (buffer_index <= i) {
+					if (buffer_index == i) {
+						return buffer_val;
+					}
+					else {
+						++index;
+					}
 				}
 			}
 
-			return MASK & (words[fast_div(i)] >> fast_mod(i));
+			return MASK & (words[fast_div(index)] >> fast_mod(index));
 		}
 
 		uint64_t psum() const {
@@ -88,27 +100,46 @@ namespace dyn {
 
 			assert(i < size_);
 
-			bool include_buffer = buffer_index <= i + 1;
+			++i;
 
-			if (!include_buffer) {
-				i++;
+			uint64_t add_val = 0;
+			auto index = i;
+			auto i1 = buffer_index;
+			auto i2 = buffer2_index;
+
+			if (buffer2_index != 0xFFFFFFFFFFFFFFFF) {
+				if (i2 <= i1) {
+					++i1;
+				}
+
+				if (i2 < i) {
+					--index;
+					add_val += buffer2_val;
+				}
+			}
+
+			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				if (i1 < i) {
+					--index;
+					add_val += buffer_val;
+				}
 			}
 
 			uint64_t s = 0;
 			uint64_t pos = 0;
 
-			auto const max = fast_div(i);
+			auto const max = fast_div(index);
 			for (uint64_t j = 0; j < max; ++j) {
 				s += __builtin_popcountll(words[j]);
 				pos += 64;
 			}
 
-			auto const mod = fast_mod(i);
+			auto const mod = fast_mod(index);
 			if (mod) {
 				s += __builtin_popcountll(words[max] & ((uint64_t(1) << mod) - 1));
 			}
 
-			return include_buffer ? s + buffer_val : s;
+			return s + add_val;
 		}
 
 		/*
@@ -291,7 +322,7 @@ namespace dyn {
 				buffer_val = x;
 			}
 			// First filled, second empty
-			else if (buffer_index != 0xFFFFFFFFFFFFFFFF && buffer2_index == 0xFFFFFFFFFFFFFFFF) {
+			else if (buffer2_index == 0xFFFFFFFFFFFFFFFF) {
 				buffer2_index = buffer_index;
 				buffer2_val = buffer_val;
 				buffer_index = i;
@@ -379,9 +410,8 @@ namespace dyn {
 				}
 				// Must've passed at least one
 			}
-
-			set<false>(buffer_index, buffer_val);
 			set<false>(buffer2_index, buffer2_val);
+			set<false>(buffer_index, buffer_val);
 			psum_ += buffer_val + buffer2_val;
 			size_ += 2;
 		}
@@ -430,6 +460,11 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
+			insert_proper();
+
+			buffer_index = 0xFFFFFFFFFFFFFFFF;
+			buffer2_index = 0xFFFFFFFFFFFFFFFF;
+
 			uint64_t tot_words = fast_div(size_) + (fast_mod(size_) != 0);
 
 			assert(tot_words <= words.size());

@@ -1,7 +1,7 @@
 #include "gtest.h"
 #include "helpers.hpp"
 #include "succinct-bitvector.hpp"
-#include "unbuffered_packed_vector.hpp"
+#include "buffer_2_packed_vector.hpp"
 #include "b-spsi.hpp"
 
 using namespace dyn;
