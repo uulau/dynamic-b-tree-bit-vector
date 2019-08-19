@@ -1,16 +1,36 @@
-#include "packed_vector8.hpp"
+#include "unbuffered_packed_vector.hpp"
 #include "succinct-bitvector.hpp"
-#include "sdsl-bv.hpp"
 #include "b-spsi.hpp"
-#include "test-case.hpp"
 #include <chrono>
-#include "int_vector.hpp"
-#include "rank_support_v5.hpp"
-#include "util.hpp"
+#include <random>
+#include <iostream>
 
 using namespace std;
 using namespace dyn;
 using namespace std::chrono;
+
+struct test_message
+{
+	enum message_type
+	{
+		insert = 0,
+		rank = 1
+	};
+
+	message_type type;
+	uint64_t index;
+	bool val;
+
+	static test_message insert_message(uint64_t i, bool v)
+	{
+		return test_message{ insert, i , v };
+	}
+
+	static test_message rank_message(uint64_t i)
+	{
+		return test_message{ rank, i, 0 };
+	}
+};
 
 template <int64_t B_LEAF, int64_t B> uint64_t test_tree()
 {
@@ -222,146 +242,6 @@ uint64_t test_packed2()
 	return count;
 }
 
-uint64_t test_sdsl()
-{
-	uint64_t count = 0;
-	uint64_t size = 8000000000;
-	uint64_t ranks = 100000000;
-
-	std::random_device rd;
-
-	std::default_random_engine generator(rd());
-
-	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
-
-	// Empty bit vector
-	sdsl::bit_vector bv(size);
-
-	const sdsl::rank_support_v5<1, 1> rs(&bv);
-
-	for (uint64_t i = 0; i < size; ++i)
-	{
-		bv[i] = rand() % 2;
-	}
-
-	std::vector<test_message> messages;
-
-	for (uint64_t i = 0; i < ranks; ++i)
-	{
-		messages.push_back(test_message::rank_message(distribution(generator) % size));
-	}
-
-	const auto t1 = high_resolution_clock::now();
-
-	for (const auto& message : messages)
-	{
-		count += rs.rank(message.index);
-	}
-
-	const auto t2 = high_resolution_clock::now();
-
-	const auto duration = duration_cast<microseconds>(t2 - t1).count();
-
-	cout << "Initial insertions: " << size << "\n";
-	cout << "Ranks: " << ranks << "\n";
-	cout << "Time taken in microseconds: " << duration << "\n";
-	cout << "\n";
-
-	return count;
-}
-
-uint64_t test_array()
-{
-	uint64_t count = 0;
-	uint64_t size = 8000000000;
-	uint64_t queries = 100000000;
-
-	std::random_device rd;
-
-	std::default_random_engine generator(rd());
-
-	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
-
-	bool* ar = new bool[size];
-
-	for (uint64_t i = 0; i < size; ++i)
-	{
-		ar[i] = rand() % 2;
-	}
-
-	std::vector<test_message> messages;
-
-	for (uint64_t i = 0; i < queries; ++i)
-	{
-		messages.push_back(test_message::rank_message(distribution(generator) % size));
-	}
-
-	const auto t1 = high_resolution_clock::now();
-
-	for (const auto& message : messages)
-	{
-		count += ar[message.index];
-	}
-
-	const auto t2 = high_resolution_clock::now();
-
-	const auto duration = duration_cast<microseconds>(t2 - t1).count();
-
-	cout << "Initial insertions: " << size << "\n";
-	cout << "Queries: " << queries << "\n";
-	cout << "Time taken in microseconds: " << duration << "\n";
-	cout << "\n";
-
-	delete[] ar;
-	return count;
-}
-
-uint64_t test_sdsl_array()
-{
-	uint64_t count = 0;
-	uint64_t size = 8000000000;
-	uint64_t queries = 100000000;
-
-	std::random_device rd;
-
-	std::default_random_engine generator(rd());
-
-	std::uniform_int_distribution<uint64_t> distribution(0, 0xFFFFFFFFFFFFFFFF);
-
-	// Empty bit vector
-	sdsl::bit_vector bv(size);
-
-	for (uint64_t i = 0; i < size; ++i)
-	{
-		bv[i] = rand() % 2;
-	}
-
-	std::vector<test_message> messages;
-
-	for (uint64_t i = 0; i < queries; ++i)
-	{
-		messages.push_back(test_message::rank_message(distribution(generator) % size));
-	}
-
-	const auto t1 = high_resolution_clock::now();
-
-	for (const auto& message : messages)
-	{
-		count += bv[message.index];
-	}
-
-	const auto t2 = high_resolution_clock::now();
-
-	const auto duration = duration_cast<microseconds>(t2 - t1).count();
-
-	cout << "Initial insertions: " << size << "\n";
-	cout << "Queries: " << queries << "\n";
-	cout << "Time taken in microseconds: " << duration << "\n";
-	cout << "\n";
-
-	return count;
-}
-
 uint64_t packed_vector_test() {
 	packed_vector v{};
 
@@ -375,8 +255,10 @@ uint64_t packed_vector_test() {
 
 		v.insert(v.size(), val);
 
-		if (v.size() != i + 1) {
+		if (v.size() != uint64_t(i + 1)) {
+#if defined(_MSC_VER)
 			__debugbreak();
+#endif
 		}
 
 		//if (v.psum(i) != ranks) {
@@ -384,7 +266,9 @@ uint64_t packed_vector_test() {
 		//}
 
 		if (v.at(i) != val) {
+#if defined(_MSC_VER)
 			__debugbreak();
+#endif
 		}
 
 		//if (vals != v.psum()) {

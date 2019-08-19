@@ -42,9 +42,8 @@ else()
   add_compile_options(-Wall -Wextra -pedantic -mavx2 -fopt-info-vec-missed)
 endif()
 
-include_directories ("include" "include/sdsl")
+include_directories ("include")
 
-add_subdirectory ("test-case-generator")
 add_subdirectory ("benchmark")
 add_subdirectory ("profiler")
 add_subdirectory ("tests")

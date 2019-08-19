@@ -86,7 +86,7 @@ template <class T> void update_test(const uint64_t size) {
 
 template <class T> void rank_test(const uint64_t size) {
 	auto tree = generate_tree<T>(size);
-	int64_t sum = 0;
+	uint64_t sum = 0;
 	for (uint64_t i = 1; i <= size; i++) {
 		auto val = tree->rank(i);
 		sum += tree->at(i - 1);

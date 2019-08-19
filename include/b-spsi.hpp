@@ -20,14 +20,16 @@
  */
 #pragma once
 
-using namespace std;
-
 #include <immintrin.h>
 #include <array>
 #include <fstream>
 #include "spsi-reference.hpp"
+#include "msvc.hpp"
+#include <iostream>
 
 namespace dyn {
+	using namespace std;
+
 	template <class leaf_type,  // underlying representation of the integers
 		uint32_t B_LEAF,  // number of integers m allowed for a
 		// leaf is B_LEAF <= m <= 2*B_LEAF (except at the beginning)
@@ -62,7 +64,7 @@ namespace dyn {
 			/*
 			 * move assignment
 			 */
-			void operator=(b_spsi&& sp) {
+			void operator=(b_spsi&& sp) noexcept {
 				root->free_mem();
 				delete root;
 
@@ -483,7 +485,6 @@ namespace dyn {
 					assert(j < leaves.size());
 					assert(j < nr_children);
 					assert(leaves[j] != NULL);
-					auto size = leaves[j]->size();
 					assert(i - previous_size < leaves[j]->size());
 
 					return leaves[j]->at(i - previous_size);

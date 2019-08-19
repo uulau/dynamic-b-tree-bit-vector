@@ -68,4 +68,4 @@ namespace dyn {
 		Container& _spsi;
 		uint64_t _idx;
 	};
-};
+}

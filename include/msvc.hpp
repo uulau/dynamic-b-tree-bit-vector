@@ -1,8 +1,9 @@
 #pragma once
 
+#if defined(_MSC_VER) && !defined(__clang__)
+
 #define __SSE4_2__
 
-#if defined(_MSC_VER) && !defined(__clang__)
 #include "stdint.h"
 #include <intrin.h>
 // and/or keywords etc.
