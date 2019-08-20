@@ -552,7 +552,9 @@ namespace dyn {
 		 * new returned block
 		 */
 		packed_vector* split() {
-			insert_proper();
+			if (buffer_index != 0xFFFFFFFFFFFFFFFF) {
+				insert_proper();
+			}
 
 			buffer_index = 0xFFFFFFFFFFFFFFFF;
 			buffer2_index = 0xFFFFFFFFFFFFFFFF;

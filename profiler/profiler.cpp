@@ -1,4 +1,4 @@
-#include "unbuffered_packed_vector.hpp"
+#include "buffer_4_packed_vector.hpp"
 #include "succinct-bitvector.hpp"
 #include "b-spsi.hpp"
 #include <chrono>
@@ -321,17 +321,17 @@ int main() {
 	//count += test_packed();
 	//count += test_sdsl_array();
 	//count += test_array();
-	// count += test_tree< 4096, 16>();
-	// count += test_tree< 4096, 128>();
-	// count += test_tree< 4096, 256>();
-	// count += test_tree< 4096, 1024>();
-	// count += test_tree< 4096, 4096>();
-	// count += test_tree< 4096, 8192>();
-	count += test_tree_insert< 4096, 16>();
-	count += test_tree_insert< 4096, 256>();
-	count += test_tree_insert< 4096, 1024>();
-	count += test_tree_insert< 4096, 4096>();
-	count += test_tree_insert< 4096, 8192>();
+	 count += test_tree< 4096, 16>();
+	 count += test_tree< 4096, 128>();
+	 count += test_tree< 4096, 256>();
+	 count += test_tree< 4096, 1024>();
+	 count += test_tree< 4096, 4096>();
+	 count += test_tree< 4096, 8192>();
+	//count += test_tree_insert< 4096, 16>();
+	//count += test_tree_insert< 4096, 256>();
+	//count += test_tree_insert< 4096, 1024>();
+	//count += test_tree_insert< 4096, 4096>();
+	//count += test_tree_insert< 4096, 8192>();
 	//count += test_tree< 4096, 2 * 8192>();
 	//count += test_tree< 4096, 3 * 8192>();
 	//count += test_tree< 4096, 65536>();
